@@ -1,1 +1,57 @@
-TEST
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<title>Google Login</title>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+}
+#user {
+  display: none;
+  font-size: 18px;
+}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div id="g_id_onload"
+    data-client_id="YOUR_CLIENT_ID"
+    data-callback="handleLogin"
+    data-auto_prompt="false">
+  </div>
+
+  <div class="g_id_signin"></div>
+</div>
+
+<div id="user"></div>
+
+<script>
+const API_URL = "YOUR_APPS_SCRIPT_URL";
+
+function handleLogin(response) {
+  fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: response.credential })
+  })
+  .then(r => r.json())
+  .then(user => {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("user").style.display = "block";
+    document.getElementById("user").innerText =
+      `Привіт, ${user.name} (${user.email})`;
+  });
+}
+</script>
+
+</body>
+</html>
