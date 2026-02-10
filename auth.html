@@ -38,18 +38,28 @@ body {
 const API_URL = "https://script.google.com/macros/s/AKfycbz_Fes_1jPoWXarNv5FH-3oMWWvpnhSPgRl980RpPx6SYk35rDghvy-FgKnQBbTucj8/exec";
 
 function handleLogin(response) {
+  // Використовуємо mode: "no-cors" не підходить, бо ми не отримаємо відповідь.
+  // Тому міняємо Content-Type на такий, що не тригерить preflight.
   fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    mode: "cors", // Залишаємо cors
+    headers: { 
+      // Важливо: не використовуємо application/json, щоб уникнути OPTIONS запиту
+      "Content-Type": "text/plain" 
+    },
     body: JSON.stringify({ token: response.credential })
   })
   .then(r => r.json())
   .then(user => {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("user").style.display = "block";
-    document.getElementById("user").innerText =
-      `Привіт, ${user.name} (${user.email})`;
-  });
+    if (user.status === 'success') {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("user").style.display = "block";
+      document.getElementById("user").innerText = `Привіт, ${user.name} (${user.email})`;
+    } else {
+      console.error("Помилка скрипта:", user.message);
+    }
+  })
+  .catch(err => console.error("Помилка мережі:", err));
 }
 </script>
 
