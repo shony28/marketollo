@@ -127,7 +127,6 @@ function updateStatus(row) {
   const card = select.closest('.task-card');
   const badge = card.querySelector('.status-badge');
 
-  // Візуальна індикація початку роботи
   const originalBtnText = btn.innerText;
   btn.disabled = true;
   btn.innerText = "⏳";
@@ -142,15 +141,15 @@ function updateStatus(row) {
   .then(out => {
     if (out.result === "success") {
       if (newStatus === "Видалити") {
-        // ВАРІАНТ А: При видаленні перезавантажуємо, щоб оновити індекси рядків
         location.reload();
       } else {
-        // При звичайному оновленні — просто змінюємо UI
+        // Оновлюємо текст і клас (колір) бейджа
         badge.innerText = newStatus;
+        badge.className = 'status-badge ' + getStatusClass(newStatus);
+
         btn.disabled = false;
         btn.innerText = originalBtnText;
 
-        // Підсвічуємо картку зеленим на секунду для підтвердження
         card.style.backgroundColor = "#e8f5e9";
         setTimeout(() => card.style.backgroundColor = "white", 1000);
       }
