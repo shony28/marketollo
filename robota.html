@@ -20,38 +20,59 @@
     const url = "https://script.google.com/macros/s/AKfycbx9jMxg5AjebLHF0z5NWJwYPISXejVYL2_uJ0mmVqFmhnM_9MAUoLaRjZQK6jSAbwfo/exec";
 
     // 1. ЗАВАНТАЖЕННЯ ДАНИХ ПРИ ВІДКРИТТІ
-    window.onload = function() {
-      fetch(url)
-        .then(res => res.json())
-        .then(tasks => {
-          const list = document.getElementById('taskList');
-          const loader = document.getElementById('loader');
-          loader.style.display = 'none';
-          
-          tasks.forEach(task => {
-            const div = document.createElement('div');
-            div.className = 'task-card';
-            div.innerHTML = `
-              <div>
-                <strong>${task.title}</strong> <br>
-                <small>Виконавець: ${task.worker || 'немає'}</small>
-              </div>
-              <div>
-                <span class="status-badge">${task.status}</span>
-                <select id="status-${task.row}">
-                  <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                  <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                  <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                  <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-                  <option value="Видалити">Видалити</option>
-                </select>
-                <button onclick="updateStatus(${task.row})">Оновити</button>
-              </div>
-            `;
-            list.appendChild(div);
-          });
-        });
-    };
+window.onload = function() {
+  
+  const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
+  const sheetName = 'Аркуш1'; // Назва вашої вкладки
+  const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+
+  fetch(gvizUrl)
+    .then(res => res.text())
+    .then(data => {
+      // GViz повертає дані з зайвим текстом на початку, його треба відрізати
+      const json = JSON.parse(data.substring(47, data.length - 2));
+      const rows = json.table.rows;
+      
+      const list = document.getElementById('taskList');
+      const loader = document.getElementById('loader');
+      loader.style.display = 'none';
+      
+      list.innerHTML = ''; // Очищуємо список
+
+      rows.forEach((row, index) => {
+        // У GViz row.c[0] - стовпець A, row.c[1] - B і т.д.
+        const task = {
+          row: index + 2, // Рядок у таблиці (+2 бо заголовок і індекс 0)
+          title: row.c[0] ? row.c[0].v : '',
+          worker: row.c[1] ? row.c[1].v : '',
+          status: row.c[3] ? row.c[3].v : ''
+        };
+
+        if (!task.title) return; // Пропускаємо порожні
+
+        const div = document.createElement('div');
+        div.className = 'task-card';
+        div.innerHTML = `
+          <div>
+            <strong>${task.title}</strong> <br>
+            <small>Виконавець: ${task.worker || 'немає'}</small>
+          </div>
+          <div>
+            <span class="status-badge">${task.status}</span>
+            <select id="status-${task.row}">
+              <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+              <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+              <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+              <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+              <option value="Видалити">Видалити</option>
+            </select>
+            <button onclick="updateStatus(${task.row})">Оновити</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    });
+};
 
     // 2. ВІДПРАВКА ОНОВЛЕННЯ
     function updateStatus(row) {
