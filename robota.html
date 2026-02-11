@@ -2,12 +2,57 @@
 <html>
 <head>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
-    .task-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-    .status-badge { font-size: 0.8em; padding: 4px 8px; border-radius: 4px; background: #eee; }
-    select { padding: 5px; margin-right: 10px; }
-    button { padding: 6px 12px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; }
-    #loader { color: #666; font-style: italic; }
+    body { 
+      font-family: sans-serif; 
+      padding: 20px; background: #f4f4f9; 
+    }
+    .task-card { 
+      background: white; 
+      padding: 15px; 
+      margin-bottom: 10px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    .status-badge { 
+      font-size: 0.8em; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      background: #eee; 
+    }
+    select { 
+      padding: 5px; 
+      margin-right: 10px; 
+    }
+    button { 
+      padding: 6px 12px; 
+      cursor: pointer; 
+      background: #4CAF50; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+    }
+    #loader { 
+      color: #666; 
+      font-style: italic; 
+    }
+    /* Базовий стиль бейджа */
+    .status-badge { 
+      font-size: 0.8em; 
+      padding: 4px 10px; 
+      border-radius: 12px; 
+      font-weight: bold;
+      color: white; /* Текст буде білим на кольоровому фоні */
+      background: #95a5a6; /* Сірий за замовчуванням */
+    }
+    
+    /* Кольори для статусів */
+    .status-badge.status-нове { background-color: #3498db; }    /* Синій */
+    .status-badge.status-процесі { background-color: #f39c12; } /* Помаранчевий */
+    .status-badge.status-пауза { background-color: #f1c40f; color: #2c3e50; } /* Жовтий */
+    .status-badge.status-виконано { background-color: #2ecc71; } /* Зелений */
   </style>
 </head>
 <body>
@@ -58,7 +103,7 @@ window.onload = function() {
             <small>Виконавець: ${task.worker || 'немає'}</small>
           </div>
           <div>
-            <span class="status-badge">${task.status}</span>
+            <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span>
             <select id="status-${task.row}">
               <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
               <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
@@ -120,6 +165,16 @@ function updateStatus(row) {
     btn.disabled = false;
     btn.innerText = originalBtnText;
   });
+}
+
+    function getStatusClass(status) {
+  switch(status) {
+    case 'Нове': return 'status-нове';
+    case 'В процесі': return 'status-процесі';
+    case 'Пауза': return 'status-пауза';
+    case 'Виконано': return 'status-виконано';
+    default: return '';
+  }
 }
   </script>
 </body>
