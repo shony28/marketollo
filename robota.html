@@ -157,18 +157,65 @@
 
     // Обробка входу через Google
     function handleLogin(response) {
-      fetch(API_URL + "?action=login", {
-        method: "POST",
-        mode: "cors",
-        headers: { 
-          "Content-Type": "text/plain" 
-        },
-        body: JSON.stringify({ token: response.credential })
-      })
-      .then(r => r.json())
-      .then(user => {
-        if (user.status === 'success') {
-          currentUserEmail = user.email;
+        fetch(API_URL + "?action=login", {
+          method: "POST",
+          mode: "cors",
+          headers: { 
+            "Content-Type": "text/plain" 
+          },
+          body: JSON.stringify({ token: response.credential })
+        })
+        .then(r => r.json())
+        .then(user => {
+          if (user.status === 'success') {
+            currentUserEmail = user.email;
+            
+            // Зберігаємо дані користувача в localStorage
+            localStorage.setItem('userEmail', user.email);
+            localStorage.setItem('userName', user.name);
+            
+            // Показуємо головний екран
+            document.getElementById("loginContainer").style.display = "none";
+            document.getElementById("appContainer").style.display = "block";
+            
+            // Показуємо інфо про користувача
+            document.getElementById("userInfo").innerHTML = `
+              <strong>Привіт, ${user.name}!</strong><br>
+              <small>${user.email}</small><br>
+              <button onclick="logout()">Вийти</button>
+            `;
+            
+            // Завантажуємо завдання
+            loadTasks();
+          } else {
+            alert("Помилка авторизації: " + user.message);
+          }
+        })
+        .catch(err => {
+          console.error("Помилка мережі:", err);
+          alert("Не вдалося підключитися до сервера");
+        });
+      }
+
+    // Вихід з системи
+    function logout() {
+        currentUserEmail = null;
+        
+        // Видаляємо дані з localStorage
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        
+        document.getElementById("loginContainer").style.display = "flex";
+        document.getElementById("appContainer").style.display = "none";
+        document.getElementById("taskList").innerHTML = "";
+      }
+   //функція для перевірки збереженої сесії
+    function checkSavedSession() {
+        const savedEmail = localStorage.getItem('userEmail');
+        const savedName = localStorage.getItem('userName');
+        
+        if (savedEmail && savedName) {
+          currentUserEmail = savedEmail;
           
           // Показуємо головний екран
           document.getElementById("loginContainer").style.display = "none";
@@ -176,30 +223,18 @@
           
           // Показуємо інфо про користувача
           document.getElementById("userInfo").innerHTML = `
-            <strong>Привіт, ${user.name}!</strong><br>
-            <small>${user.email}</small><br>
+            <strong>Привіт, ${savedName}!</strong><br>
+            <small>${savedEmail}</small><br>
             <button onclick="logout()">Вийти</button>
           `;
           
           // Завантажуємо завдання
           loadTasks();
-        } else {
-          alert("Помилка авторизації: " + user.message);
         }
-      })
-      .catch(err => {
-        console.error("Помилка мережі:", err);
-        alert("Не вдалося підключитися до сервера");
-      });
-    }
+      }
 
-    // Вихід з системи
-    function logout() {
-      currentUserEmail = null;
-      document.getElementById("loginContainer").style.display = "flex";
-      document.getElementById("appContainer").style.display = "none";
-      document.getElementById("taskList").innerHTML = "";
-    }
+// Викликаємо при завантаженні сторінки
+window.addEventListener('DOMContentLoaded', checkSavedSession);
 
     // Завантаження завдань
     function loadTasks() {
