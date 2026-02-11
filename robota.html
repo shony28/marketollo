@@ -75,21 +75,54 @@ window.onload = function() {
 };
 
     // 2. ВІДПРАВКА ОНОВЛЕННЯ
-    function updateStatus(row) {
-      const newStatus = document.getElementById('status-' + row).value;
-      const data = { row: row, status: newStatus };
+function updateStatus(row) {
+  const btn = event.target; // Отримуємо кнопку, на яку натиснули
+  const select = document.getElementById('status-' + row);
+  const newStatus = select.value;
+  const card = select.closest('.task-card'); // Знаходимо картку завдання
+  const badge = card.querySelector('.status-badge');
 
-      fetch(url, {
-        method: "POST",
-        body: JSON.stringify(data)
-      })
-      .then(res => res.json())
-      .then(out => {
-        alert("Успішно! Статус змінено на " + newStatus);
-        location.reload(); // Перевантажуємо, щоб оновити список
-      })
-      .catch(err => alert("Помилка: " + err));
+  // Блокуємо кнопку та показуємо завантаження
+  const originalBtnText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = "⏳...";
+
+  const data = { row: row, status: newStatus };
+
+  fetch(url, {
+    method: "POST",
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(out => {
+    if (out.result === "success") {
+      // 1. Якщо обрано "Видалити" — прибираємо картку зі списку
+      if (newStatus === "Видалити") {
+        card.style.transition = "opacity 0.5s";
+        card.style.opacity = "0";
+        setTimeout(() => card.remove(), 500);
+      } else {
+        // 2. Оновлюємо текст статусу в бейджі без перезавантаження
+        badge.innerText = newStatus;
+        
+        // Повертаємо кнопку в початковий стан
+        btn.disabled = false;
+        btn.innerText = originalBtnText;
+        
+        // Можна додати ефект "успіху" (зелений спалах)
+        card.style.backgroundColor = "#e8f5e9";
+        setTimeout(() => card.style.backgroundColor = "white", 1000);
+      }
+    } else {
+      throw new Error(out.message);
     }
+  })
+  .catch(err => {
+    alert("Помилка: " + err);
+    btn.disabled = false;
+    btn.innerText = originalBtnText;
+  });
+}
   </script>
 </body>
 </html>
