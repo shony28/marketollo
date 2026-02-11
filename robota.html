@@ -76,16 +76,16 @@ window.onload = function() {
 
     // 2. ВІДПРАВКА ОНОВЛЕННЯ
 function updateStatus(row) {
-  const btn = event.target; // Отримуємо кнопку, на яку натиснули
+  const btn = event.target;
   const select = document.getElementById('status-' + row);
   const newStatus = select.value;
-  const card = select.closest('.task-card'); // Знаходимо картку завдання
+  const card = select.closest('.task-card');
   const badge = card.querySelector('.status-badge');
 
-  // Блокуємо кнопку та показуємо завантаження
+  // Візуальна індикація початку роботи
   const originalBtnText = btn.innerText;
   btn.disabled = true;
-  btn.innerText = "⏳...";
+  btn.innerText = "⏳";
 
   const data = { row: row, status: newStatus };
 
@@ -96,29 +96,27 @@ function updateStatus(row) {
   .then(res => res.json())
   .then(out => {
     if (out.result === "success") {
-      // 1. Якщо обрано "Видалити" — прибираємо картку зі списку
       if (newStatus === "Видалити") {
-        card.style.transition = "opacity 0.5s";
-        card.style.opacity = "0";
-        setTimeout(() => card.remove(), 500);
+        // ВАРІАНТ А: При видаленні перезавантажуємо, щоб оновити індекси рядків
+        location.reload();
       } else {
-        // 2. Оновлюємо текст статусу в бейджі без перезавантаження
+        // При звичайному оновленні — просто змінюємо UI
         badge.innerText = newStatus;
-        
-        // Повертаємо кнопку в початковий стан
         btn.disabled = false;
         btn.innerText = originalBtnText;
-        
-        // Можна додати ефект "успіху" (зелений спалах)
+
+        // Підсвічуємо картку зеленим на секунду для підтвердження
         card.style.backgroundColor = "#e8f5e9";
         setTimeout(() => card.style.backgroundColor = "white", 1000);
       }
     } else {
-      throw new Error(out.message);
+      alert("Помилка сервера: " + out.message);
+      btn.disabled = false;
+      btn.innerText = originalBtnText;
     }
   })
   .catch(err => {
-    alert("Помилка: " + err);
+    alert("Помилка мережі: " + err);
     btn.disabled = false;
     btn.innerText = originalBtnText;
   });
