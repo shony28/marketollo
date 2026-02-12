@@ -335,7 +335,7 @@ window.addEventListener('DOMContentLoaded', checkSavedSession);
       .then(res => res.json())
       .then(out => {
         if (out.result === "success") {
-          if (newStatus === "Видалити") {
+          if (newStatus === "Видалити" || newStatus === "В процесі") {
             loadTasks(); // Перезавантажуємо список
           } else {
             badge.innerText = newStatus;
