@@ -237,6 +237,7 @@
 window.addEventListener('DOMContentLoaded', checkSavedSession);
 
     // Завантаження завдань
+    // Завантаження завдань з новими індексами колонок
     function loadTasks() {
       if (!currentUserEmail) {
         alert("Помилка: не авторизовано");
@@ -250,6 +251,7 @@ window.addEventListener('DOMContentLoaded', checkSavedSession);
       fetch(gvizUrl)
         .then(res => res.text())
         .then(data => {
+          // Очищаємо JSON від префікса Google
           const json = JSON.parse(data.substring(47, data.length - 2));
           const rows = json.table.rows;
           
@@ -262,12 +264,13 @@ window.addEventListener('DOMContentLoaded', checkSavedSession);
           let hasVisibleTasks = false;
 
           rows.forEach((row, index) => {
+            // Нові індекси (Колонка - 1)
             const task = {
               row: index + 2,
-              title: row.c[0] ? row.c[0].v : '',
-              worker: row.c[1] ? row.c[1].v : '',
-              status: row.c[3] ? row.c[3].v : '',
-              userEmail: row.c[19] ? row.c[19].v : '' // Стовпець T (індекс 19)
+              title:     row.c[1]  ? row.c[1].v  : '', // B (col_TITLE)
+              worker:    row.c[5]  ? row.c[5].v  : '', // F (col_WORKER)
+              status:    row.c[7]  ? row.c[7].v  : '', // H (col_STATUS)
+              userEmail: row.c[23] ? row.c[23].v : ''  // X (col_TASK_EMAIL)
             };
 
             if (!task.title) return;
