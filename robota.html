@@ -198,13 +198,23 @@
     <div id="userInfo"></div>
     <h2>📋 Мої завдання</h2>
 
-    <div class="filter-container">
-      <span>Приховати виконані</span>
-      <label class="switch">
-        <input type="checkbox" id="hideDoneToggle" onchange="applyFilter()">
-        <span class="slider"></span>
-      </label>
-    </div>
+<div class="filter-container" style="flex-wrap: wrap; gap: 15px;">
+  <div>
+    <span>Сортування:</span>
+    <select id="sortOrder" onchange="loadTasks()" style="padding: 5px; font-size: 14px; border-radius: 5px;">
+      <option value="priority">За пріоритетом (Дата)</option>
+      <option value="status">За статусом</option>
+    </select>
+  </div>
+  
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span>Приховати виконані</span>
+    <label class="switch">
+      <input type="checkbox" id="hideDoneToggle" onchange="applyFilter()">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
 
     <div id="loader">Завантаження завдань...</div>
     <div id="taskList"></div>
@@ -295,73 +305,79 @@
       }
 
     function loadTasks() {
-      if (!currentUserEmail) return;
+  if (!currentUserEmail) return;
 
-      const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
-      const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
+  const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
+  const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
 
-      fetch(gvizUrl)
-        .then(res => res.text())
-        .then(data => {
-          const json = JSON.parse(data.substring(47, data.length - 2));
-          const rows = json.table.rows;
-          const list = document.getElementById('taskList');
-          const loader = document.getElementById('loader');
-          loader.style.display = 'none';
-          list.innerHTML = '';
+  fetch(gvizUrl)
+    .then(res => res.text())
+    .then(data => {
+      const json = JSON.parse(data.substring(47, data.length - 2));
+      let rows = json.table.rows;
+      const list = document.getElementById('taskList');
+      document.getElementById('loader').style.display = 'none';
+      list.innerHTML = '';
 
-          let hasVisibleTasks = false;
+      // Преобразуем данные в удобный массив объектов
+      let tasks = rows.map((row, index) => ({
+        row: index + 2,
+        title:     row.c[1]  ? row.c[1].v  : '',
+        priorityDate: row.c[6] ? new Date(row.c[6].v) : new Date(8640000000000000), // G (Column 7)
+        worker:    row.c[5]  ? row.c[5].v  : '',
+        status:    row.c[7]  ? row.c[7].v  : '',
+        userEmail: row.c[23] ? row.c[23].v : ''
+      })).filter(t => t.title && t.userEmail === currentUserEmail);
 
-          rows.forEach((row, index) => {
-            const task = {
-              row: index + 2,
-              title:     row.c[1]  ? row.c[1].v  : '',
-              worker:    row.c[5]  ? row.c[5].v  : '',
-              status:    row.c[7]  ? row.c[7].v  : '',
-              userEmail: row.c[23] ? row.c[23].v : ''
-            };
+      const sortMode = document.getElementById('sortOrder').value;
 
-            if (!task.title || task.userEmail !== currentUserEmail) return;
+      // Логика сортировки
+      tasks.sort((a, b) => {
+        // Правило: "Виконано" всегда в самом низу при любой сортировке
+        if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
+        if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
 
-            hasVisibleTasks = true;
+        if (sortMode === 'priority') {
+          // Сортировка по дате (G): от меньшей к большей
+          return a.priorityDate - b.priorityDate;
+        } else {
+          // Сортировка по статусу: В процесі > Пауза > Нове > Виконано
+          const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
+          return (weights[a.status] || 99) - (weights[b.status] || 99);
+        }
+      });
 
-            const div = document.createElement('div');
-            div.className = 'task-card';
-            // Додаємо атрибут статусу для фільтрації
-            div.setAttribute('data-status', task.status);
-            
-            div.innerHTML = `
-              <div class="task-info">
-                <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-                <strong>${task.title}</strong>
-                <small>Виконавець: ${task.worker || 'немає'}</small>
-              </div>
-              <div class="task-controls">
-                <select id="status-${task.row}">
-                  <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                  <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                  <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                  <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-                  <option value="Видалити">Видалити</option>
-                </select>
-                <button onclick="updateStatus(${task.row})">Оновити</button>
-              </div>
-            `;
-            list.appendChild(div);
-          });
-
-          if (!hasVisibleTasks) {
-            list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
-          }
-
-          // Застосовуємо фільтр відразу після завантаження
-          applyFilter();
-        })
-        .catch(err => {
-          console.error("Помилка завантаження:", err);
-          document.getElementById('loader').innerText = "Помилка завантаження даних";
+      // Отрисовка отсортированных задач
+      if (tasks.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
+      } else {
+        tasks.forEach(task => {
+          const div = document.createElement('div');
+          div.className = 'task-card';
+          div.setAttribute('data-status', task.status);
+          div.innerHTML = `
+            <div class="task-info">
+              <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+              <strong>${task.title}</strong>
+              <small>Виконавець: ${task.worker || 'немає'}</small>
+            </div>
+            <div class="task-controls">
+              <select id="status-${task.row}">
+                <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+                <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+                <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+                <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+                <option value="Видалити">Видалити</option>
+              </select>
+              <button onclick="updateStatus(${task.row})">Оновити</button>
+            </div>
+          `;
+          list.appendChild(div);
         });
-    }
+      }
+      applyFilter(); // Применяем фильтр "Скрыть выполненные"
+    });
+}
 
     function updateStatus(row) {
       const btn = event.target;
