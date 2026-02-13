@@ -322,6 +322,11 @@ function checkSavedSession() {
         });
       }
 
+    function saveSortSettings() {
+    const sortMode = document.getElementById('sortOrder').value;
+    localStorage.setItem('taskSortMode', sortMode);
+}
+
     function loadTasks() {
   if (!currentUserEmail) return;
 
