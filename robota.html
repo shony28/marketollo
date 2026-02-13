@@ -4,182 +4,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
-  body { 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    padding: 10px; 
-    background: #f4f4f9; 
-    margin: 0;
-  }
-
-  /* Стилі для екрану входу */
-  #loginContainer {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    text-align: center;
-  }
-
-  #loginContainer h1 {
-    color: #333;
-    margin-bottom: 30px;
-  }
-
-  /* Контейнер для списку завдань */
-  #appContainer {
-    display: none;
-  }
-
-  h2 { text-align: center; color: #333; margin: 20px 0; }
-
-  /* Стилі для фільтра */
-  .filter-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #555;
-  }
-
-  /* Стилізація перемикача (Toggle Switch) */
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 20px;
-  }
-
-  .switch input { 
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 20px;
-  }
-
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 14px;
-    width: 14px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-  }
-
-  input:checked + .slider { background-color: #2ecc71; }
-  input:checked + .slider:before { transform: translateX(20px); }
-
-  /* Клас для приховування */
-  .hidden-task { display: none !important; }
-
-  #userInfo {
-    text-align: center;
-    margin: 20px 0;
-    padding: 15px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    max-width: 600px;
-    margin: 20px auto;
-  }
-
-  #userInfo button {
-    margin-top: 10px;
-    padding: 8px 16px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  #taskList { max-width: 600px; margin: 0 auto; }
-
-  .task-card { 
-    background: white; 
-    padding: 16px; 
-    margin-bottom: 12px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  @media (min-width: 480px) {
-    .task-card { flex-direction: row; justify-content: space-between; align-items: center; }
-  }
-
-  .task-info { flex: 1; }
-  .task-info strong { font-size: 1.1em; color: #2c3e50; display: block; margin-bottom: 4px; }
-  .task-info small { color: #7f8c8d; font-size: 0.9em; }
-
-  .task-controls { 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-  }
-
-  @media (min-width: 480px) {
-    .task-controls { width: auto; }
-  }
-
-  select { 
-    flex: 1;
-    padding: 10px; 
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #fff;
-    font-size: 16px;
-  }
-
-  button { 
-    padding: 10px 18px; 
-    font-size: 16px; 
-    font-weight: bold;
-    cursor: pointer; 
-    background: #2b2b2b; 
-    color: white; 
-    border: none; 
-    border-radius: 8px;
-    min-width: 60px;
-    transition: background 0.2s;
-  }
-
-  button:active { background: #555; }
-
-  .status-badge { 
-    display: inline-block;
-    margin-bottom: 8px;
-    font-size: 0.75em; 
-    padding: 4px 12px; 
-    border-radius: 20px; 
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .status-badge.status-нове { background-color: #3498db; color: white; }
-  .status-badge.status-процесі { background-color: #f7cb00; color: #2c3e50; }
-  .status-badge.status-пауза { background-color: #f78600; color: white; }
-  .status-badge.status-виконано { background-color: #2ecc71; color: white; }
-
-  #loader { text-align: center; padding: 20px; }
-</style>
+    /* Ваші стилі копіюються сюди без змін... */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 10px; background: #f4f4f9; margin: 0; }
+    #loginContainer { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; text-align: center; }
+    #appContainer { display: none; }
+    h2 { text-align: center; color: #333; margin: 20px 0; }
+    .filter-container { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 0.9em; color: #555; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2ecc71; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .hidden-task { display: none !important; }
+    #userInfo { text-align: center; margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin: 20px auto; }
+    #userInfo button { margin-top: 10px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    #taskList { max-width: 600px; margin: 0 auto; }
+    .task-card { background: white; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 12px; }
+    @media (min-width: 480px) { .task-card { flex-direction: row; justify-content: space-between; align-items: center; } }
+    .task-info { flex: 1; }
+    .task-info strong { font-size: 1.1em; color: #2c3e50; display: block; margin-bottom: 4px; }
+    .task-info small { color: #7f8c8d; font-size: 0.9em; }
+    .task-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+    @media (min-width: 480px) { .task-controls { width: auto; } }
+    select { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff; font-size: 16px; }
+    button { padding: 10px 18px; font-size: 16px; font-weight: bold; cursor: pointer; background: #2b2b2b; color: white; border: none; border-radius: 8px; min-width: 60px; transition: background 0.2s; }
+    button:active { background: #555; }
+    .status-badge { display: inline-block; margin-bottom: 8px; font-size: 0.75em; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-badge.status-нове { background-color: #3498db; color: white; }
+    .status-badge.status-процесі { background-color: #f7cb00; color: #2c3e50; }
+    .status-badge.status-пауза { background-color: #f78600; color: white; }
+    .status-badge.status-виконано { background-color: #2ecc71; color: white; }
+    #loader { text-align: center; padding: 20px; }
+  </style>
 </head>
 <body>
 
@@ -198,33 +55,42 @@
     <div id="userInfo"></div>
     <h2>📋 Мої завдання</h2>
 
-<div class="filter-container" style="flex-wrap: wrap; gap: 15px;">
-  <div>
-    <span>Сортування:</span>
-      <select id="sortOrder" onchange="saveSortSettings(); loadTasks();" style="padding: 5px; font-size: 14px; border-radius: 5px;">
-        <option value="default">Як у таблиці (за порядком)</option>
-        <option value="priority">За пріоритетом (Дата)</option>
-        <option value="status">За статусом</option>
-      </select>
-  </div>
-  
-  <div style="display: flex; align-items: center; gap: 8px;">
-    <span>Приховати виконані</span>
-    <label class="switch">
-      <input type="checkbox" id="hideDoneToggle" onchange="applyFilter()">
-      <span class="slider"></span>
-    </label>
-  </div>
-</div>
+    <div class="filter-container" style="flex-wrap: wrap; gap: 15px;">
+      <div>
+        <span>Сортування:</span>
+          <select id="sortOrder" onchange="saveSortSettings(); loadTasks();" style="padding: 5px; font-size: 14px; border-radius: 5px;">
+            <option value="default">Як у таблиці (за порядком)</option>
+            <option value="priority">За пріоритетом (Дата)</option>
+            <option value="status">За статусом</option>
+          </select>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span>Приховати виконані</span>
+        <label class="switch">
+          <input type="checkbox" id="hideDoneToggle" onchange="applyFilter()">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
 
     <div id="loader">Завантаження завдань...</div>
     <div id="taskList"></div>
   </div>
 
   <script>
+    // --- НАЛАШТУВАННЯ КОЛОНОК (Синхронізовано з TEST.js) ---
+    // В JS масивах індексація починається з 0, тому віднімаємо 1 від номерів колонок таблиці
+    const col_TITLE           = 2 - 1;   // B
+    const col_WORKER          = 6 - 1;   // F
+    const col_DATE            = 7 - 1;   // G
+    const col_STATUS          = 8 - 1;   // H
+    const col_TASK_EMAIL      = 24 - 1;  // X
+
     const API_URL = "https://script.google.com/macros/s/AKfycbx9jMxg5AjebLHF0z5NWJwYPISXejVYL2_uJ0mmVqFmhnM_9MAUoLaRjZQK6jSAbwfo/exec";
     let currentUserEmail = null;
 
+    // Решта логіки handleLogin, logout, checkSavedSession залишається...
     function handleLogin(response) {
         fetch(API_URL + "?action=login", {
           method: "POST",
@@ -265,196 +131,147 @@
         document.getElementById("taskList").innerHTML = "";
     }
 
-// Функція для перевірки збереженої сесії та налаштувань інтерфейсу
-function checkSavedSession() {
-    // 1. Отримуємо дані користувача з localStorage
-    const savedEmail = localStorage.getItem('userEmail');
-    const savedName = localStorage.getItem('userName');
-    
-    // 2. Відновлюємо стан фільтра "Приховати виконані"
-    const savedFilter = localStorage.getItem('hideDoneSettings');
-    if (savedFilter !== null) {
-        // Перетворюємо рядок "true"/"false" назад у булеве значення
-        document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
-    }
-
-    // 3. Відновлюємо вибраний режим сортування
-    const savedSort = localStorage.getItem('taskSortMode');
-    if (savedSort !== null) {
-        document.getElementById('sortOrder').value = savedSort;
-    }
-    
-    // 4. Якщо користувач був авторизований, налаштовуємо інтерфейс і завантажуємо дані
-    if (savedEmail && savedName) {
-        currentUserEmail = savedEmail;
+    function checkSavedSession() {
+        const savedEmail = localStorage.getItem('userEmail');
+        const savedName = localStorage.getItem('userName');
+        const savedFilter = localStorage.getItem('hideDoneSettings');
+        if (savedFilter !== null) document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
+        const savedSort = localStorage.getItem('taskSortMode');
+        if (savedSort !== null) document.getElementById('sortOrder').value = savedSort;
         
-        // Показуємо головний екран, ховаємо екран входу
-        document.getElementById("loginContainer").style.display = "none";
-        document.getElementById("appContainer").style.display = "block";
-        
-        // Відображаємо інформацію про користувача
-        document.getElementById("userInfo").innerHTML = `
-            <strong>Привіт, ${savedName}!</strong><br>
-            <small>${savedEmail}</small><br>
-            <button onclick="logout()">Вийти</button>
-        `;
-        
-        // Завантажуємо завдання (логіка сортування вже вбудована в loadTasks)
-        loadTasks();
+        if (savedEmail && savedName) {
+            currentUserEmail = savedEmail;
+            document.getElementById("loginContainer").style.display = "none";
+            document.getElementById("appContainer").style.display = "block";
+            document.getElementById("userInfo").innerHTML = `
+                <strong>Привіт, ${savedName}!</strong><br>
+                <small>${savedEmail}</small><br>
+                <button onclick="logout()">Вийти</button>
+            `;
+            loadTasks();
+        }
     }
-}
 
     window.addEventListener('DOMContentLoaded', checkSavedSession);
 
-    // Функція застосування фільтра
-      function applyFilter() {
-        const hideDoneToggle = document.getElementById('hideDoneToggle');
-        const hideDone = hideDoneToggle.checked;
-        // Сохраняем выбор пользователя в браузер
-        localStorage.setItem('hideDoneSettings', hideDone);
-        const tasks = document.querySelectorAll('.task-card');
-        tasks.forEach(card => {
-          const status = card.getAttribute('data-status');
-          if (hideDone && status === 'Виконано') {
-            card.classList.add('hidden-task');
-          } else {
-            card.classList.remove('hidden-task');
-          }
-        });
-      }
+    function applyFilter() {
+      const hideDone = document.getElementById('hideDoneToggle').checked;
+      localStorage.setItem('hideDoneSettings', hideDone);
+      document.querySelectorAll('.task-card').forEach(card => {
+        const status = card.getAttribute('data-status');
+        (hideDone && status === 'Виконано') ? card.classList.add('hidden-task') : card.classList.remove('hidden-task');
+      });
+    }
 
     function saveSortSettings() {
-    const sortMode = document.getElementById('sortOrder').value;
-    localStorage.setItem('taskSortMode', sortMode);
-}
+      localStorage.setItem('taskSortMode', document.getElementById('sortOrder').value);
+    }
 
     function loadTasks() {
-                if (!currentUserEmail) return;
+        if (!currentUserEmail) return;
 
-                const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
-                const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
+        const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
+        const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
 
-                fetch(gvizUrl)
-                  .then(res => res.text())
-                  .then(data => {
-                    const json = JSON.parse(data.substring(47, data.length - 2));
-                    let rows = json.table.rows;
-                    const list = document.getElementById('taskList');
-                    document.getElementById('loader').style.display = 'none';
-                    list.innerHTML = '';
+        fetch(gvizUrl)
+          .then(res => res.text())
+          .then(data => {
+            const json = JSON.parse(data.substring(47, data.length - 2));
+            let rows = json.table.rows;
+            const list = document.getElementById('taskList');
+            document.getElementById('loader').style.display = 'none';
+            list.innerHTML = '';
 
-                    let tasks = rows.map((row, index) => {
-                      let rawDate = null;
-                      if (row.c[6] && row.c[6].v) {
-                        const val = row.c[6].v;
-                        if (typeof val === 'string' && val.includes('Date')) {
-                          const parts = val.match(/\d+/g).map(Number);
-                          rawDate = new Date(parts[0], parts[1], parts[2]);
-                        } else {
-                          rawDate = new Date(val);
-                        }
-                      }
-
-                      return {
-                        row: index + 2, // Це наш оригінальний порядок з таблиці
-                        title:     row.c[1]  ? row.c[1].v  : '',
-                        priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
-                        worker:    row.c[5]  ? row.c[5].v  : '',
-                        status:    row.c[7]  ? row.c[7].v  : '',
-                        userEmail: row.c[23] ? row.c[23].v : ''
-                      };
-                    }).filter(t => t.title && t.userEmail === currentUserEmail);
-
-                    const sortMode = document.getElementById('sortOrder').value;
-
-                    tasks.sort((a, b) => {
-                      // Правило: "Виконано" завжди в самому низу
-                      if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
-                      if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
-
-                      if (sortMode === 'priority') {
-                        return a.priorityDate - b.priorityDate;
-                      } else if (sortMode === 'status') {
-                        const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
-                        return (weights[a.status] || 99) - (weights[b.status] || 99);
-                      } else {
-                        // default: Сортування за номером рядка (як у таблиці)
-                        return a.row - b.row;
-                      }
-                    });
-
-                    if (tasks.length === 0) {
-                      list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
-                    } else {
-                      tasks.forEach(task => {
-                        const div = document.createElement('div');
-                        div.className = 'task-card';
-                        div.setAttribute('data-status', task.status);
-                        
-                        const dateString = task.priorityDate.getFullYear() === 2099 
-                          ? 'не вказано' 
-                          : task.priorityDate.toLocaleDateString('uk-UA');
-
-                        div.innerHTML = `
-                          <div class="task-info">
-                            <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-                            <strong>${task.title}</strong>
-                            <small>Виконавець: ${task.worker || 'немає'}</small>
-                            <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">
-                              📅 Виконати до: ${dateString}
-                            </small>
-                          </div>
-                          <div class="task-controls">
-                            <select id="status-${task.row}">
-                              <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                              <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                              <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                              <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-                              <option value="Видалити">Видалити</option>
-                            </select>
-                            <button onclick="updateStatus(${task.row})">Оновити</button>
-                          </div>
-                        `;
-                        list.appendChild(div);
-                      });
-                    }
-                    applyFilter();
-                  })
-                  .catch(err => {
-                    console.error("Помилка:", err);
-                    document.getElementById('loader').innerText = "Помилка завантаження";
-                  });
+            let tasks = rows.map((row, index) => {
+              let rawDate = null;
+              // Використовуємо налаштовану колонку col_DATE
+              const dateCell = row.c[col_DATE];
+              if (dateCell && dateCell.v) {
+                const val = dateCell.v;
+                if (typeof val === 'string' && val.includes('Date')) {
+                  const parts = val.match(/\d+/g).map(Number);
+                  rawDate = new Date(parts[0], parts[1], parts[2]);
+                } else {
+                  rawDate = new Date(val);
+                }
               }
+
+              return {
+                row: index + 2,
+                title:     (row.c[col_TITLE] && row.c[col_TITLE].v) ? row.c[col_TITLE].v : '',
+                priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
+                worker:    (row.c[col_WORKER] && row.c[col_WORKER].v) ? row.c[col_WORKER].v : '',
+                status:    (row.c[col_STATUS] && row.c[col_STATUS].v) ? row.c[col_STATUS].v : '',
+                userEmail: (row.c[col_TASK_EMAIL] && row.c[col_TASK_EMAIL].v) ? row.c[col_TASK_EMAIL].v : ''
+              };
+            }).filter(t => t.title && t.userEmail === currentUserEmail);
+
+            // Логіка сортування та рендеру...
+            const sortMode = document.getElementById('sortOrder').value;
+            tasks.sort((a, b) => {
+              if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
+              if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
+              if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
+              if (sortMode === 'status') {
+                const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
+                return (weights[a.status] || 99) - (weights[b.status] || 99);
+              }
+              return a.row - b.row;
+            });
+
+            if (tasks.length === 0) {
+              list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
+            } else {
+              tasks.forEach(task => {
+                const div = document.createElement('div');
+                div.className = 'task-card';
+                div.setAttribute('data-status', task.status);
+                const dateString = task.priorityDate.getFullYear() === 2099 ? 'не вказано' : task.priorityDate.toLocaleDateString('uk-UA');
+                div.innerHTML = `
+                  <div class="task-info">
+                    <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+                    <strong>${task.title}</strong>
+                    <small>Виконавець: ${task.worker || 'немає'}</small>
+                    <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
+                  </div>
+                  <div class="task-controls">
+                    <select id="status-${task.row}">
+                      <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+                      <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+                      <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+                      <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+                      <option value="Видалити">Видалити</option>
+                    </select>
+                    <button onclick="updateStatus(${task.row})">Оновити</button>
+                  </div>
+                `;
+                list.appendChild(div);
+              });
+            }
+            applyFilter();
+          })
+          .catch(err => {
+            console.error("Помилка:", err);
+            document.getElementById('loader').innerText = "Помилка завантаження";
+          });
+      }
 
     function updateStatus(row) {
       const btn = event.target;
       const select = document.getElementById('status-' + row);
       const newStatus = select.value;
-      const card = select.closest('.task-card');
-
       btn.disabled = true;
       btn.innerText = "⏳";
-
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
       })
       .then(res => res.json())
       .then(out => {
-        if (out.result === "success") {
-          // Після успішного оновлення просто перевантажуємо дані, щоб зберегти логіку фільтрів
-          loadTasks();
-        } else {
-          alert("Помилка сервера: " + out.message);
-          btn.disabled = false;
-          btn.innerText = "Оновити";
-        }
+        if (out.result === "success") { loadTasks(); } 
+        else { alert("Помилка сервера: " + out.message); btn.disabled = false; btn.innerText = "Оновити"; }
       })
-      .catch(err => {
-        alert("Помилка мережі: " + err);
-        btn.disabled = false;
-        btn.innerText = "Оновити";
-      });
+      .catch(err => { alert("Помилка мережі: " + err); btn.disabled = false; btn.innerText = "Оновити"; });
     }
 
     function getStatusClass(status) {
