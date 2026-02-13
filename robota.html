@@ -378,11 +378,15 @@ function checkSavedSession() {
           const div = document.createElement('div');
           div.className = 'task-card';
           div.setAttribute('data-status', task.status);
+          
           div.innerHTML = `
             <div class="task-info">
               <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
               <strong>${task.title}</strong>
               <small>Виконавець: ${task.worker || 'немає'}</small>
+              <small style="display: block; margin-top: 2px; color: #e67e22;">
+                Виконати до: ${task.priorityDate.toLocaleDateString('uk-UA')}
+              </small>
             </div>
             <div class="task-controls">
               <select id="status-${task.row}">
