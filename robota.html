@@ -245,8 +245,8 @@ window.addEventListener('DOMContentLoaded', checkSavedSession);
       }
 
       const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
-      const sheetName = 'Аркуш1';
-      const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+      //const sheetName = 'Аркуш1';
+      const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
 
       fetch(gvizUrl)
         .then(res => res.text())
