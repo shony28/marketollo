@@ -128,6 +128,7 @@
   </div>
 
   <script>
+    let formConfig = []; // Глобальна змінна для зберігання структури
     // --- НАЛАШТУВАННЯ КОЛОНОК (Синхронізовано з TEST.js) ---
     // В JS масивах індексація починається з 0, тому віднімаємо 1 від номерів колонок таблиці
     const col_TITLE           = 2 - 1;   // B
@@ -343,80 +344,89 @@
       }
     }
 
-    function toggleCreateForm(show) {
-      document.getElementById('createForm').style.display = show ? 'block' : 'none';
-      if (show) {
-        // Встановлюємо сьогоднішню дату як підказку
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        document.getElementById('newDate').value = `${day}.${month}.${today.getFullYear()}`;
-        document.getElementById('newTitle').focus();
+      function toggleCreateForm(show) {
+        const formContainer = document.getElementById('createForm');
+        if (show) {
+          // Завантажуємо структуру полів при відкритті
+          fetch(API_URL)
+            .then(res => res.json())
+            .then(structure => {
+              formConfig = structure;
+              renderDynamicForm(structure);
+              formContainer.style.display = 'block';
+            });
+        } else {
+          formContainer.style.display = 'none';
+        }
       }
-    }
+
+      function renderDynamicForm(fields) {
+          const container = document.getElementById('createForm');
+          // Очищуємо контейнер, але залишаємо заголовок та кнопки (або перемальовуємо все)
+          let html = '<h3 style="margin-top:0">Нове завдання</h3>';
+          
+          fields.forEach(field => {
+            html += `<div class="form-group">
+              <label>${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}</label>`;
+            
+            if (field.type === 'select') {
+              html += `<input list="list-${field.col}" id="field-${field.col}" class="dynamic-field" placeholder="Оберіть або введіть...">
+                       <datalist id="list-${field.col}">
+                         ${field.options.map(opt => `<option value="${opt}">`).join('')}
+                       </datalist>`;
+            } else if (field.type === 'date') {
+              html += `<input type="text" id="field-${field.col}" class="dynamic-field" 
+                        placeholder="DD.MM.YYYY" oninput="formatDateInput(this)" maxlength="10">`;
+            } else {
+              html += `<input type="text" id="field-${field.col}" class="dynamic-field" placeholder="${field.label}">`;
+            }
+            
+            html += `</div>`;
+          });
+
+          html += `<button class="btn-primary" onclick="submitNewTask()">Зберегти завдання</button>
+                   <button class="btn-cancel" onclick="toggleCreateForm(false)">Скасувати</button>`;
+          
+          container.innerHTML = html;
+        }
 
     function submitNewTask() {
-        const title = document.getElementById('newTitle').value.trim();
-        const worker = document.getElementById('newWorker').value.trim();
-        const date = document.getElementById('newDate').value.trim();
-        const btn = document.getElementById('saveTaskBtn');
+          const payload = {
+            userEmail: currentUserEmail,
+            fields: {}
+          };
 
-        // 1. Базова перевірка заповнення
-        if (!title || !date) {
-          alert("Будь ласка, заповніть назву та дату");
-          return;
-        }
+          // Збираємо дані з усіх динамічних полів
+          for (let field of formConfig) {
+            const input = document.getElementById(`field-${field.col}`);
+            const value = input.value.trim();
 
-        // 2. Перевірка формату регулярним виразом
-        const dateRegex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
-        const match = date.match(dateRegex);
-        
-        if (!match) {
-          alert("Некоректний формат дати. Використовуйте DD.MM.YYYY (напр. 13.02.2026)");
-          return;
-        }
-
-        // 3. Логічна перевірка дати (чи існує такий день/місяць)
-        const day = parseInt(match[1]);
-        const month = parseInt(match[2]);
-        const year = parseInt(match[3]);
-        const testDate = new Date(year, month - 1, day);
-
-        if (testDate.getFullYear() !== year || testDate.getMonth() !== month - 1 || testDate.getDate() !== day) {
-          alert("Ви ввели неіснуючу дату!");
-          return;
-        }
-
-        // Якщо все ок — відправляємо
-        btn.disabled = true;
-        btn.innerText = "⏳ Збереження...";
-
-        fetch(API_URL + "?action=create", {
-          method: "POST",
-          body: JSON.stringify({
-            title: title,
-            worker: worker,
-            date: date,
-            userEmail: currentUserEmail
-          })
-        })
-        .then(res => res.json())
-        .then(out => {
-          if (out.result === "success") {
-            toggleCreateForm(false);
-            document.getElementById('newTitle').value = '';
-            document.getElementById('newWorker').value = '';
-            loadTasks();
-          } else {
-            alert("Помилка: " + out.message);
+            if (field.required && !value) {
+              alert(`Поле "${field.label}" є обов'язковим`);
+              return;
+            }
+            payload.fields[field.col] = value;
           }
-        })
-        .catch(err => alert("Помилка мережі: " + err))
-        .finally(() => {
-          btn.disabled = false;
-          btn.innerText = "Зберегти завдання";
-        });
-      }
+
+          const btn = event.target;
+          btn.disabled = true;
+          btn.innerText = "⏳ Збереження...";
+
+          fetch(API_URL + "?action=create", {
+            method: "POST",
+            body: JSON.stringify(payload)
+          })
+          .then(res => res.json())
+          .then(out => {
+            if (out.result === "success") {
+              toggleCreateForm(false);
+              loadTasks();
+            } else {
+              alert("Помилка: " + out.message);
+              btn.disabled = false;
+            }
+          });
+        }
 
 //функція для маски дати
     function formatDateInput(input) {
