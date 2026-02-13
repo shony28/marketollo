@@ -336,41 +336,61 @@ function checkSavedSession() {
   fetch(gvizUrl)
     .then(res => res.text())
     .then(data => {
+      // Парсимо JSON, який повертає Google Visualization API
       const json = JSON.parse(data.substring(47, data.length - 2));
       let rows = json.table.rows;
       const list = document.getElementById('taskList');
       document.getElementById('loader').style.display = 'none';
       list.innerHTML = '';
 
-      // Преобразуем данные в удобный массив объектов
-      let tasks = rows.map((row, index) => ({
-        row: index + 2,
-        title:     row.c[1]  ? row.c[1].v  : '',
-        priorityDate: row.c[6] ? new Date(row.c[6].v) : new Date(8640000000000000), // G (Column 7)
-        worker:    row.c[5]  ? row.c[5].v  : '',
-        status:    row.c[7]  ? row.c[7].v  : '',
-        userEmail: row.c[23] ? row.c[23].v : ''
-      })).filter(t => t.title && t.userEmail === currentUserEmail);
+      // Перетворюємо дані у зручний масив об'єктів
+      let tasks = rows.map((row, index) => {
+        let rawDate = null;
+        
+        // Стовпець G має індекс 6
+        if (row.c[6] && row.c[6].v) {
+          const val = row.c[6].v;
+          
+          // Google передає дати як рядок "Date(2026,1,8)" (місяці 0-11)
+          if (typeof val === 'string' && val.includes('Date')) {
+            const parts = val.match(/\d+/g).map(Number);
+            // Створюємо об'єкт дати: рік, місяць, день
+            rawDate = new Date(parts[0], parts[1], parts[2]);
+          } else {
+            rawDate = new Date(val);
+          }
+        }
+
+        return {
+          row: index + 2,
+          title:     row.c[1]  ? row.c[1].v  : '',
+          // Якщо дати немає, використовуємо 2099 рік для коректного сортування в кінець
+          priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
+          worker:    row.c[5]  ? row.c[5].v  : '',
+          status:    row.c[7]  ? row.c[7].v  : '',
+          userEmail: row.c[23] ? row.c[23].v : ''
+        };
+      }).filter(t => t.title && t.userEmail === currentUserEmail);
 
       const sortMode = document.getElementById('sortOrder').value;
 
-      // Логика сортировки
+      // Логіка сортування
       tasks.sort((a, b) => {
-        // Правило: "Виконано" всегда в самом низу при любой сортировке
+        // Правило: "Виконано" завжди в самому низу
         if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
         if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
 
         if (sortMode === 'priority') {
-          // Сортировка по дате (G): от меньшей к большей
+          // Сортування за датою: від найближчої до найвіддаленішої
           return a.priorityDate - b.priorityDate;
         } else {
-          // Сортировка по статусу: В процесі > Пауза > Нове > Виконано
+          // Сортування за статусом
           const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
           return (weights[a.status] || 99) - (weights[b.status] || 99);
         }
       });
 
-      // Отрисовка отсортированных задач
+      // Відмальовування карток
       if (tasks.length === 0) {
         list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
       } else {
@@ -379,13 +399,18 @@ function checkSavedSession() {
           div.className = 'task-card';
           div.setAttribute('data-status', task.status);
           
+          // Форматуємо дату для відображення
+          const dateString = task.priorityDate.getFullYear() === 2099 
+            ? 'не вказано' 
+            : task.priorityDate.toLocaleDateString('uk-UA');
+
           div.innerHTML = `
             <div class="task-info">
               <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
               <strong>${task.title}</strong>
               <small>Виконавець: ${task.worker || 'немає'}</small>
-              <small style="display: block; margin-top: 2px; color: #e67e22;">
-                Виконати до: ${task.priorityDate.toLocaleDateString('uk-UA')}
+              <small style="display: block; margin-top: 4px; color: #e67e22; font-weight: 500;">
+                📅 Виконати до: ${dateString}
               </small>
             </div>
             <div class="task-controls">
@@ -402,7 +427,11 @@ function checkSavedSession() {
           list.appendChild(div);
         });
       }
-      applyFilter(); // Применяем фильтр "Скрыть выполненные"
+      applyFilter(); // Застосовуємо фільтр "Приховати виконані"
+    })
+    .catch(err => {
+      console.error("Помилка завантаження:", err);
+      document.getElementById('loader').innerText = "Помилка завантаження даних";
     });
 }
 
