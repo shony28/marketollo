@@ -84,10 +84,14 @@
         <label>Виконавець (col_WORKER)</label>
         <input type="text" id="newWorker" placeholder="Прізвище Ім'я">
       </div>
-      <div class="form-group">
-        <label>Дата виконання (DD.MM.YYYY)</label>
-        <input type="text" id="newDate" placeholder="13.02.2026">
-      </div>
+        <div class="form-group">
+          <label>Дата виконання (DD.MM.YYYY)</label>
+          <input type="text" 
+                 id="newDate" 
+                 placeholder="13.02.2026" 
+                 oninput="formatDateInput(this)" 
+                 maxlength="10">
+        </div>
       <button class="btn-primary" id="saveTaskBtn" onclick="submitNewTask()">Зберегти завдання</button>
       <button class="btn-cancel" onclick="toggleCreateForm(false)">Скасувати</button>
     </div>
@@ -334,51 +338,81 @@
     }
 
     function submitNewTask() {
-      const title = document.getElementById('newTitle').value;
-      const worker = document.getElementById('newWorker').value;
-      const date = document.getElementById('newDate').value;
-      const btn = document.getElementById('saveTaskBtn');
+        const title = document.getElementById('newTitle').value.trim();
+        const worker = document.getElementById('newWorker').value.trim();
+        const date = document.getElementById('newDate').value.trim();
+        const btn = document.getElementById('saveTaskBtn');
 
-      if (!title || !date) {
-        alert("Будь ласка, заповніть назву та дату");
-        return;
-      }
-
-      // Валідація формату дати DD.MM.YYYY
-      if (!/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
-        alert("Формат дати має бути 13.02.2026");
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerText = "⏳ Збереження...";
-
-      fetch(API_URL + "?action=create", {
-        method: "POST",
-        body: JSON.stringify({
-          title: title,
-          worker: worker,
-          date: date,
-          userEmail: currentUserEmail
-        })
-      })
-      .then(res => res.json())
-      .then(out => {
-        if (out.result === "success") {
-          toggleCreateForm(false);
-          // Очищуємо поля
-          document.getElementById('newTitle').value = '';
-          document.getElementById('newWorker').value = '';
-          loadTasks();
-        } else {
-          alert("Помилка: " + out.message);
+        // 1. Базова перевірка заповнення
+        if (!title || !date) {
+          alert("Будь ласка, заповніть назву та дату");
+          return;
         }
-      })
-      .catch(err => alert("Помилка мережі: " + err))
-      .finally(() => {
-        btn.disabled = false;
-        btn.innerText = "Зберегти завдання";
-      });
+
+        // 2. Перевірка формату регулярним виразом
+        const dateRegex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+        const match = date.match(dateRegex);
+        
+        if (!match) {
+          alert("Некоректний формат дати. Використовуйте DD.MM.YYYY (напр. 13.02.2026)");
+          return;
+        }
+
+        // 3. Логічна перевірка дати (чи існує такий день/місяць)
+        const day = parseInt(match[1]);
+        const month = parseInt(match[2]);
+        const year = parseInt(match[3]);
+        const testDate = new Date(year, month - 1, day);
+
+        if (testDate.getFullYear() !== year || testDate.getMonth() !== month - 1 || testDate.getDate() !== day) {
+          alert("Ви ввели неіснуючу дату!");
+          return;
+        }
+
+        // Якщо все ок — відправляємо
+        btn.disabled = true;
+        btn.innerText = "⏳ Збереження...";
+
+        fetch(API_URL + "?action=create", {
+          method: "POST",
+          body: JSON.stringify({
+            title: title,
+            worker: worker,
+            date: date,
+            userEmail: currentUserEmail
+          })
+        })
+        .then(res => res.json())
+        .then(out => {
+          if (out.result === "success") {
+            toggleCreateForm(false);
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newWorker').value = '';
+            loadTasks();
+          } else {
+            alert("Помилка: " + out.message);
+          }
+        })
+        .catch(err => alert("Помилка мережі: " + err))
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerText = "Зберегти завдання";
+        });
+      }
+
+//функція для маски дати
+    function formatDateInput(input) {
+      // Видаляємо все, крім цифр
+      let value = input.value.replace(/\D/g, '');
+      
+      // Формуємо рядок з крапками
+      if (value.length > 2 && value.length <= 4) {
+        value = value.slice(0, 2) + '.' + value.slice(2);
+      } else if (value.length > 4) {
+        value = value.slice(0, 2) + '.' + value.slice(2, 4) + '.' + value.slice(4, 8);
+      }
+      
+      input.value = value;
     }
   </script>
 </body>
