@@ -346,14 +346,28 @@
 
       function toggleCreateForm(show) {
         const formContainer = document.getElementById('createForm');
+        
         if (show) {
-          // Завантажуємо структуру полів при відкритті
+          // 1. Показуємо форму миттєво
+          formContainer.style.display = 'block';
+          // 2. Очищуємо старий контент і показуємо лоадер
+          formContainer.innerHTML = `
+            <h3 style="margin-top:0">Нове завдання</h3>
+            <div id="formLoader" style="text-align:center; padding: 20px;">
+              <span style="color: #666;">⏳ Завантаження конфігурації...</span>
+            </div>
+          `;
+
+          // 3. Запускаємо фонове завантаження полів
           fetch(API_URL)
             .then(res => res.json())
             .then(structure => {
               formConfig = structure;
-              renderDynamicForm(structure);
-              formContainer.style.display = 'block';
+              renderDynamicFields(structure); // Малюємо тільки поля всередині
+            })
+            .catch(err => {
+              formContainer.innerHTML += `<p style="color:red">Помилка завантаження: ${err}</p>
+              <button class="btn-cancel" onclick="toggleCreateForm(false)">Закрити</button>`;
             });
         } else {
           formContainer.style.display = 'none';
@@ -390,43 +404,89 @@
           container.innerHTML = html;
         }
 
-    function submitNewTask() {
-          const payload = {
-            userEmail: currentUserEmail,
-            fields: {}
-          };
-
-          // Збираємо дані з усіх динамічних полів
-          for (let field of formConfig) {
-            const input = document.getElementById(`field-${field.col}`);
-            const value = input.value.trim();
-
-            if (field.required && !value) {
-              alert(`Поле "${field.label}" є обов'язковим`);
-              return;
-            }
-            payload.fields[field.col] = value;
-          }
-
-          const btn = event.target;
-          btn.disabled = true;
-          btn.innerText = "⏳ Збереження...";
-
-          fetch(API_URL + "?action=create", {
-            method: "POST",
-            body: JSON.stringify(payload)
-          })
-          .then(res => res.json())
-          .then(out => {
-            if (out.result === "success") {
-              toggleCreateForm(false);
-              loadTasks();
+        function renderDynamicFields(fields) {
+          const container = document.getElementById('createForm');
+          let html = '<h3 style="margin-top:0">Нове завдання</h3>';
+          
+          fields.forEach(field => {
+            html += `<div class="form-group" style="margin-bottom: 12px;">
+              <label style="display:block; font-weight:bold; margin-bottom:5px;">
+                ${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}
+              </label>`;
+            
+            if (field.type === 'select') {
+              html += `<input list="list-${field.col}" id="field-${field.col}" class="dynamic-field" 
+                        placeholder="Оберіть або введіть..." style="width:100%; padding:8px; box-sizing:border-box;">
+                       <datalist id="list-${field.col}">
+                         ${field.options.map(opt => `<option value="${opt}">`).join('')}
+                       </datalist>`;
+            } else if (field.type === 'date') {
+              html += `<input type="text" id="field-${field.col}" class="dynamic-field" 
+                        placeholder="ДД.ММ.РРРР" oninput="formatDateInput(this)" maxlength="10" 
+                        style="width:100%; padding:8px; box-sizing:border-box;">`;
             } else {
-              alert("Помилка: " + out.message);
-              btn.disabled = false;
+              html += `<input type="text" id="field-${field.col}" class="dynamic-field" 
+                        placeholder="${field.label}" style="width:100%; padding:8px; box-sizing:border-box;">`;
             }
+            
+            html += `</div>`;
           });
+
+          html += `
+            <div style="margin-top:20px; display:flex; gap:10px;">
+              <button class="btn-primary" onclick="submitNewTask()" style="flex:1">Зберегти</button>
+              <button class="btn-cancel" onclick="toggleCreateForm(false)" style="flex:1">Скасувати</button>
+            </div>
+          `;
+          
+          container.innerHTML = html;
         }
+        
+
+function submitNewTask() {
+  const btn = event.target;
+  const payload = {
+    userEmail: currentUserEmail,
+    fields: {}
+  };
+
+  // Валідація та збір даних
+  for (let field of formConfig) {
+    const input = document.getElementById(`field-${field.col}`);
+    const value = input.value.trim();
+
+    if (field.required && !value) {
+      alert(`Поле "${field.label}" є обов'язковим`);
+      input.focus();
+      return;
+    }
+    payload.fields[field.col] = value;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "⏳ Збереження...";
+
+  fetch(API_URL + "?action=create", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(out => {
+    if (out.result === "success") {
+      toggleCreateForm(false);
+      loadTasks();
+    } else {
+      alert("Помилка: " + out.message);
+      btn.disabled = false;
+      btn.innerText = "Зберегти";
+    }
+  })
+  .catch(err => {
+    alert("Помилка мережі");
+    btn.disabled = false;
+    btn.innerText = "Зберегти";
+  });
+}
 
 //функція для маски дати
     function formatDateInput(input) {
