@@ -201,7 +201,7 @@
 <div class="filter-container" style="flex-wrap: wrap; gap: 15px;">
   <div>
     <span>Сортування:</span>
-    <select id="sortOrder" onchange="loadTasks()" style="padding: 5px; font-size: 14px; border-radius: 5px;">
+    <select id="sortOrder" onchange="saveSortSettings(); loadTasks();" style="padding: 5px; font-size: 14px; border-radius: 5px;">
       <option value="priority">За пріоритетом (Дата)</option>
       <option value="status">За статусом</option>
     </select>
@@ -264,26 +264,44 @@
         document.getElementById("taskList").innerHTML = "";
     }
 
-    function checkSavedSession() {
-        const savedEmail = localStorage.getItem('userEmail');
-        const savedName = localStorage.getItem('userName');
-        // Восстанавливаем состояние фильтра из памяти
-        const savedFilter = localStorage.getItem('hideDoneSettings');
-        if (savedFilter !== null) {
-          document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
-        }
-        if (savedEmail && savedName) {
-          currentUserEmail = savedEmail;
-          document.getElementById("loginContainer").style.display = "none";
-          document.getElementById("appContainer").style.display = "block";
-          document.getElementById("userInfo").innerHTML = `
+// Функція для перевірки збереженої сесії та налаштувань інтерфейсу
+function checkSavedSession() {
+    // 1. Отримуємо дані користувача з localStorage
+    const savedEmail = localStorage.getItem('userEmail');
+    const savedName = localStorage.getItem('userName');
+    
+    // 2. Відновлюємо стан фільтра "Приховати виконані"
+    const savedFilter = localStorage.getItem('hideDoneSettings');
+    if (savedFilter !== null) {
+        // Перетворюємо рядок "true"/"false" назад у булеве значення
+        document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
+    }
+
+    // 3. Відновлюємо вибраний режим сортування
+    const savedSort = localStorage.getItem('taskSortMode');
+    if (savedSort !== null) {
+        document.getElementById('sortOrder').value = savedSort;
+    }
+    
+    // 4. Якщо користувач був авторизований, налаштовуємо інтерфейс і завантажуємо дані
+    if (savedEmail && savedName) {
+        currentUserEmail = savedEmail;
+        
+        // Показуємо головний екран, ховаємо екран входу
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("appContainer").style.display = "block";
+        
+        // Відображаємо інформацію про користувача
+        document.getElementById("userInfo").innerHTML = `
             <strong>Привіт, ${savedName}!</strong><br>
             <small>${savedEmail}</small><br>
             <button onclick="logout()">Вийти</button>
-          `;
-          loadTasks();
-        }
+        `;
+        
+        // Завантажуємо завдання (логіка сортування вже вбудована в loadTasks)
+        loadTasks();
     }
+}
 
     window.addEventListener('DOMContentLoaded', checkSavedSession);
 
