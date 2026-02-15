@@ -3,171 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Статистика завдань</title>
+  <title>Розширена статистика</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 20px;
-      color: #333;
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); 
+      gap: 20px; 
     }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
+    .chart-card { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 12px; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
     }
-    .stats-container {
-      display: grid;
-      /* Змінено для кращого відображення 3-4 карток */
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    .chart-card {
-      background: white;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-      min-height: 400px;
-      display: flex;
-      flex-direction: column;
-    }
-    .chart-title {
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 10px;
-      color: #2c3e50;
-      font-size: 1.1em;
-    }
-    #loader {
-      text-align: center;
-      font-size: 1.2em;
-      margin-top: 50px;
-    }
-    .back-btn {
-      display: inline-block;
-      margin-bottom: 20px;
-      padding: 10px 20px;
-      background: #2b2b2b;
-      color: white;
-      text-decoration: none;
-      border-radius: 8px;
-      font-size: 14px;
-    }
+    h3 { color: #444; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .back-link { text-decoration: none; color: #007bff; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <a href="index.html" class="back-btn">← Назад до завдань</a>
-    <h1>📊 Статистика часу</h1>
-    <p>Розподіл часу (у хвилинах) за категоріями</p>
+    <a href="index.html" class="back-link">← На головну</a>
+    <h1>Аналітика ефективності</h1>
   </div>
 
-  <div id="loader">Завантаження даних з таблиці...</div>
-
-  <div class="stats-container">
+  <div class="stats-grid">
     <div class="chart-card">
-      <div class="chart-title">За типами робіт</div>
-      <div id="chart_types" style="width: 100%; height: 350px;"></div>
+      <h3>Розподіл за типом робіт</h3>
+      <div id="chart_pie_types" style="height: 300px;"></div>
     </div>
 
     <div class="chart-card">
-      <div class="chart-title">За проєктами</div>
-      <div id="chart_projects" style="width: 100%; height: 350px;"></div>
+      <h3>Топ виконавців (хв)</h3>
+      <div id="chart_bar_workers" style="height: 300px;"></div>
+    </div>
+
+    <div class="chart-card" style="grid-column: 1 / -1;">
+      <h3>Навантаження по днях (сумарно хв)</h3>
+      <div id="chart_line_days" style="height: 400px;"></div>
     </div>
 
     <div class="chart-card">
-      <div class="chart-title">Розподіл за контрагентом</div>
-      <div id="chart_clients" style="width: 100%; height: 350px;"></div>
+      <h3>Час за проєктами</h3>
+      <div id="chart_bar_projects" style="height: 300px;"></div>
     </div>
   </div>
 
   <script>
-    // Індекси колонок
+    // Індекси колонок (з вашого gas.js)
     const COL_TYPE      = 0;  // A
     const COL_PROJECT   = 2;  // C
-    const COL_CLIENT    = 3;  // D
-    const COL_MINUTES   = 13; // N
+    const COL_WORKER    = 5;  // F (col_WORKER = 6)
+    const COL_DATE      = 6;  // G (col_DATE = 7)
+    const COL_MINUTES   = 13; // N (col_TOTAL_MINUTES = 14)
 
     const SPREADSHEET_ID = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
 
-    google.charts.load('current', {'packages':['corechart']});
+    google.charts.load('current', {'packages':['corechart', 'bar', 'line']});
     google.charts.setOnLoadCallback(fetchData);
 
     function fetchData() {
       fetch(GVIZ_URL)
         .then(res => res.text())
         .then(text => {
-          const jsonString = text.substring(47, text.length - 2);
-          const data = JSON.parse(jsonString);
-          processAndDraw(data.table.rows);
-          document.getElementById('loader').style.display = 'none';
-        })
-        .catch(err => {
-          console.error("Помилка:", err);
-          document.getElementById('loader').innerText = "Помилка завантаження даних.";
+          const json = JSON.parse(text.substring(47, text.length - 2));
+          processData(json.table.rows);
         });
     }
 
-    function processAndDraw(rows) {
+    function processData(rows) {
       const stats = {
         types: {},
+        workers: {},
         projects: {},
-        clients: {}
+        days: {}
       };
 
       rows.forEach(row => {
-        const cells = row.c;
-        const mins = (cells[COL_MINUTES] && cells[COL_MINUTES].v) ? Number(cells[COL_MINUTES].v) : 0;
+        const c = row.c;
+        const mins = (c[COL_MINUTES] && c[COL_MINUTES].v) ? Number(c[COL_MINUTES].v) : 0;
+        if (mins <= 0) return;
+
+        // Групування
+        const type = c[COL_TYPE]?.v || "Інше";
+        const worker = c[COL_WORKER]?.v || "Невідомо";
+        const project = c[COL_PROJECT]?.v || "Без назви";
         
-        if (mins > 0) {
-          // Типи
-          const type = (cells[COL_TYPE] && cells[COL_TYPE].v) ? cells[COL_TYPE].v : "Не вказано";
-          stats.types[type] = (stats.types[type] || 0) + mins;
-
-          // Проєкти
-          const project = (cells[COL_PROJECT] && cells[COL_PROJECT].v) ? cells[COL_PROJECT].v : "Без проєкту";
-          stats.projects[project] = (stats.projects[project] || 0) + mins;
-
-          // Контрагенти (використовуємо для нової діаграми)
-          const client = (cells[COL_CLIENT] && cells[COL_CLIENT].v) ? cells[COL_CLIENT].v : "Невідомий контрагент";
-          stats.clients[client] = (stats.clients[client] || 0) + mins;
+        // Обробка дати (для графіка динаміки)
+        let dateKey = "Немає дати";
+        if (c[COL_DATE] && c[COL_DATE].f) {
+           dateKey = c[COL_DATE].f; // Використовуємо форматовану дату з таблиці
         }
+
+        stats.types[type] = (stats.types[type] || 0) + mins;
+        stats.workers[worker] = (stats.workers[worker] || 0) + mins;
+        stats.projects[project] = (stats.projects[project] || 0) + mins;
+        stats.days[dateKey] = (stats.days[dateKey] || 0) + mins;
       });
 
-      drawPieChart('chart_types', 'Тип', stats.types);
-      drawPieChart('chart_projects', 'Проєкт', stats.projects);
-      drawPieChart('chart_clients', 'Контрагент', stats.clients);
+      drawCharts(stats);
     }
 
-    function drawPieChart(elementId, label, dataObj) {
-      const dataArray = [[label, 'Хвилини']];
-      for (const [key, value] of Object.entries(dataObj)) {
-        dataArray.push([key, value]);
-      }
+    function drawCharts(stats) {
+      // 1. Pie Chart
+      const dataPie = google.visualization.arrayToDataTable([
+        ['Тип', 'Хвилини'], ...Object.entries(stats.types)
+      ]);
+      new google.visualization.PieChart(document.getElementById('chart_pie_types'))
+          .draw(dataPie, { pieHole: 0.4, chartArea: {width:'100%', height:'80%'} });
 
-      const data = google.visualization.arrayToDataTable(dataArray);
-      const options = {
-        pieHole: 0.4,
-        chartArea: {width: '95%', height: '80%'},
-        legend: {position: 'bottom', textStyle: {fontSize: 12}},
-        // Яскраві кольори для контрагентів
-        colors: ['#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'],
-        animation: { startup: true, duration: 800, easing: 'out' }
-      };
+      // 2. Column Chart (Виконавці)
+      const dataWorkers = google.visualization.arrayToDataTable([
+        ['Виконавець', 'Хвилини', { role: 'style' }],
+        ...Object.entries(stats.workers).map(([k, v]) => [k, v, '#3498db'])
+      ]);
+      new google.visualization.ColumnChart(document.getElementById('chart_bar_workers'))
+          .draw(dataWorkers, { legend: 'none', chartArea: {width:'80%'} });
 
-      const chart = new google.visualization.PieChart(document.getElementById(elementId));
-      chart.draw(data, options);
+      // 3. Line Chart (Динаміка) - сортуємо дати для коректного графіка
+      const sortedDays = Object.entries(stats.days); // В реалі краще сортувати через Date.parse
+      const dataLine = google.visualization.arrayToDataTable([
+        ['Дата', 'Завантаження'], ...sortedDays
+      ]);
+      new google.visualization.LineChart(document.getElementById('chart_line_days'))
+          .draw(dataLine, { 
+            curveType: 'function', 
+            legend: { position: 'bottom' },
+            hAxis: { title: 'Дата' },
+            vAxis: { title: 'Хвилини' },
+            pointSize: 7
+          });
+
+      // 4. Bar Chart (Проєкти)
+      const dataProj = google.visualization.arrayToDataTable([
+        ['Проєкт', 'Хвилини'], ...Object.entries(stats.projects)
+      ]);
+      new google.visualization.BarChart(document.getElementById('chart_bar_projects'))
+          .draw(dataProj, { legend: 'none', colors: ['#2ecc71'] });
     }
-
-    window.addEventListener('resize', () => {
-        // Викликаємо перемальовку без повторного запиту до мережі, якщо потрібно
-        fetchData(); 
-    });
   </script>
 </body>
 </html>
