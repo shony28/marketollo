@@ -32,6 +32,11 @@
 
   <div class="stats-grid">
     <div class="chart-card">
+      <h3>Розподіл за контрагентом</h3>
+      <div id="chart_pie_kontrahent" style="height: 300px;"></div>
+    </div>
+
+    <div class="chart-card">
       <h3>Розподіл за типом робіт</h3>
       <div id="chart_pie_types" style="height: 300px;"></div>
     </div>
@@ -53,12 +58,13 @@
   </div>
 
   <script>
-    // Індекси колонок (з вашого gas.js)
-    const COL_TYPE      = 0;  // A
-    const COL_PROJECT   = 2;  // C
-    const COL_WORKER    = 5;  // F (col_WORKER = 6)
-    const COL_DATE      = 6;  // G (col_DATE = 7)
-    const COL_MINUTES   = 13; // N (col_TOTAL_MINUTES = 14)
+    // Індекси колонок
+    const COL_TYPE       = 0;  // A
+    const COL_PROJECT    = 2;  // C
+    const COL_KONTRAHENT = 3;  // D (4 - 1 = 3)
+    const COL_WORKER     = 5;  // F
+    const COL_DATE       = 6;  // G
+    const COL_MINUTES    = 13; // N
 
     const SPREADSHEET_ID = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
@@ -80,7 +86,8 @@
         types: {},
         workers: {},
         projects: {},
-        days: {}
+        days: {},
+        kontrahents: {} // Об'єкт для контрагентів
       };
 
       rows.forEach(row => {
@@ -92,31 +99,39 @@
         const type = c[COL_TYPE]?.v || "Інше";
         const worker = c[COL_WORKER]?.v || "Невідомо";
         const project = c[COL_PROJECT]?.v || "Без назви";
+        const kontr = c[COL_KONTRAHENT]?.v || "Не вказано";
         
-        // Обробка дати (для графіка динаміки)
         let dateKey = "Немає дати";
         if (c[COL_DATE] && c[COL_DATE].f) {
-           dateKey = c[COL_DATE].f; // Використовуємо форматовану дату з таблиці
+           dateKey = c[COL_DATE].f;
         }
 
         stats.types[type] = (stats.types[type] || 0) + mins;
         stats.workers[worker] = (stats.workers[worker] || 0) + mins;
         stats.projects[project] = (stats.projects[project] || 0) + mins;
         stats.days[dateKey] = (stats.days[dateKey] || 0) + mins;
+        stats.kontrahents[kontr] = (stats.kontrahents[kontr] || 0) + mins;
       });
 
       drawCharts(stats);
     }
 
     function drawCharts(stats) {
-      // 1. Pie Chart
+      // 1. Pie Chart - Контрагенти
+      const dataKontr = google.visualization.arrayToDataTable([
+        ['Контрагент', 'Хвилини'], ...Object.entries(stats.kontrahents)
+      ]);
+      new google.visualization.PieChart(document.getElementById('chart_pie_kontrahent'))
+          .draw(dataKontr, { pieHole: 0.4, chartArea: {width:'90%', height:'80%'} });
+
+      // 2. Pie Chart - Типи
       const dataPie = google.visualization.arrayToDataTable([
         ['Тип', 'Хвилини'], ...Object.entries(stats.types)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_types'))
-          .draw(dataPie, { pieHole: 0.4, chartArea: {width:'100%', height:'80%'} });
+          .draw(dataPie, { pieHole: 0.4, chartArea: {width:'90%', height:'80%'} });
 
-      // 2. Column Chart (Виконавці)
+      // 3. Column Chart (Виконавці)
       const dataWorkers = google.visualization.arrayToDataTable([
         ['Виконавець', 'Хвилини', { role: 'style' }],
         ...Object.entries(stats.workers).map(([k, v]) => [k, v, '#3498db'])
@@ -124,8 +139,8 @@
       new google.visualization.ColumnChart(document.getElementById('chart_bar_workers'))
           .draw(dataWorkers, { legend: 'none', chartArea: {width:'80%'} });
 
-      // 3. Line Chart (Динаміка) - сортуємо дати для коректного графіка
-      const sortedDays = Object.entries(stats.days); // В реалі краще сортувати через Date.parse
+      // 4. Line Chart (Динаміка)
+      const sortedDays = Object.entries(stats.days);
       const dataLine = google.visualization.arrayToDataTable([
         ['Дата', 'Завантаження'], ...sortedDays
       ]);
@@ -138,7 +153,7 @@
             pointSize: 7
           });
 
-      // 4. Bar Chart (Проєкти)
+      // 5. Bar Chart (Проєкти)
       const dataProj = google.visualization.arrayToDataTable([
         ['Проєкт', 'Хвилини'], ...Object.entries(stats.projects)
       ]);
