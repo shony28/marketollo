@@ -156,9 +156,21 @@
     }
 
     function drawCharts(stats) {
-      const commonOptions = {
-        chartArea: {width: '85%', height: '75%'},
-        legend: { position: 'bottom', textStyle: { fontSize: 12 } }
+      // Налаштування для кругових діаграм (легенда праворуч)
+      const pieOptions = {
+        pieHole: 0.4,
+        chartArea: { width: '70%', height: '80%', left: '5%' }, // 'left' дає відступ від краю
+        legend: { 
+          position: 'right', 
+          alignment: 'center',
+          textStyle: { fontSize: 12 } 
+        }
+      };
+
+      // Налаштування для стовпчикових діаграм (легенда знизу або відсутня)
+      const barOptions = {
+        chartArea: { width: '80%', height: '70%' },
+        legend: { position: 'none' } 
       };
 
       // 1. Контрагенти
@@ -166,14 +178,14 @@
         ['Контрагент', 'Хвилини'], ...Object.entries(stats.kontrahents)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_kontrahent'))
-          .draw(dataKontr, { ...commonOptions, pieHole: 0.4 });
+          .draw(dataKontr, pieOptions);
 
       // 2. Типи робіт
       const dataPie = google.visualization.arrayToDataTable([
         ['Тип', 'Хвилини'], ...Object.entries(stats.types)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_types'))
-          .draw(dataPie, { ...commonOptions, pieHole: 0.4 });
+          .draw(dataPie, pieOptions);
 
       // 3. Виконавці
       const dataWorkers = google.visualization.arrayToDataTable([
@@ -181,14 +193,14 @@
         ...Object.entries(stats.workers).map(([k, v]) => [k, v, '#3498db'])
       ]);
       new google.visualization.ColumnChart(document.getElementById('chart_bar_workers'))
-          .draw(dataWorkers, { ...commonOptions, legend: 'none' });
+          .draw(dataWorkers, barOptions);
 
       // 4. Проєкти
       const dataProj = google.visualization.arrayToDataTable([
         ['Проєкт', 'Хвилини'], ...Object.entries(stats.projects)
       ]);
       new google.visualization.BarChart(document.getElementById('chart_bar_projects'))
-          .draw(dataProj, { ...commonOptions, legend: 'none', colors: ['#2ecc71'] });
+          .draw(dataProj, { ...barOptions, colors: ['#2ecc71'] });
     }
   </script>
 </body>
