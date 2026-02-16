@@ -6,21 +6,67 @@
   <title>Розширена статистика</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <style>
-    body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
+    body { 
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      background-color: #f0f2f5; 
+      margin: 0;
+      padding: 15px; 
+      color: #333;
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 20px; 
+      padding-top: 10px;
+    }
+
+    /* Адаптивна сітка: 1 колонка на мобільних, 2 на десктопах */
     .stats-grid { 
       display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); 
-      gap: 20px; 
+      grid-template-columns: 1fr; 
+      gap: 15px; 
+      max-width: 1200px;
+      margin: 0 auto;
     }
+
+    @media (min-width: 768px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      body { padding: 30px; }
+    }
+
     .chart-card { 
       background: white; 
-      padding: 20px; 
+      padding: 15px; 
       border-radius: 12px; 
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+      display: flex;
+      flex-direction: column;
     }
-    h3 { color: #444; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-    .back-link { text-decoration: none; color: #007bff; font-weight: bold; }
+
+    h3 { 
+      font-size: 1.1rem;
+      color: #444; 
+      border-bottom: 2px solid #f0f2f5; 
+      padding-bottom: 10px; 
+      margin-top: 0;
+    }
+
+    .back-link { 
+      text-decoration: none; 
+      color: #007bff; 
+      font-weight: bold; 
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    /* Контейнер для графіків, щоб вони не виходили за межі */
+    .chart-container {
+      width: 100%;
+      height: 300px;
+    }
   </style>
 </head>
 <body>
@@ -33,22 +79,22 @@
   <div class="stats-grid">
     <div class="chart-card">
       <h3>Розподіл за контрагентом</h3>
-      <div id="chart_pie_kontrahent" style="height: 300px;"></div>
+      <div id="chart_pie_kontrahent" class="chart-container"></div>
     </div>
 
     <div class="chart-card">
       <h3>Розподіл за типом робіт</h3>
-      <div id="chart_pie_types" style="height: 300px;"></div>
+      <div id="chart_pie_types" class="chart-container"></div>
     </div>
 
     <div class="chart-card">
       <h3>Топ виконавців (хв)</h3>
-      <div id="chart_bar_workers" style="height: 300px;"></div>
+      <div id="chart_bar_workers" class="chart-container"></div>
     </div>
 
     <div class="chart-card">
       <h3>Час за проєктами</h3>
-      <div id="chart_bar_projects" style="height: 300px;"></div>
+      <div id="chart_bar_projects" class="chart-container"></div>
     </div>
   </div>
 
@@ -62,8 +108,15 @@
     const SPREADSHEET_ID = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
 
+    let globalStats = null; // Зберігаємо дані для перемальовування
+
     google.charts.load('current', {'packages':['corechart', 'bar']});
     google.charts.setOnLoadCallback(fetchData);
+
+    // Додаємо слухач подій для зміни розміру вікна
+    window.addEventListener('resize', () => {
+      if (globalStats) drawCharts(globalStats);
+    });
 
     function fetchData() {
       fetch(GVIZ_URL)
@@ -98,23 +151,29 @@
         stats.kontrahents[kontr] = (stats.kontrahents[kontr] || 0) + mins;
       });
 
+      globalStats = stats;
       drawCharts(stats);
     }
 
     function drawCharts(stats) {
+      const commonOptions = {
+        chartArea: {width: '85%', height: '75%'},
+        legend: { position: 'bottom', textStyle: { fontSize: 12 } }
+      };
+
       // 1. Контрагенти
       const dataKontr = google.visualization.arrayToDataTable([
         ['Контрагент', 'Хвилини'], ...Object.entries(stats.kontrahents)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_kontrahent'))
-          .draw(dataKontr, { pieHole: 0.4, chartArea: {width:'90%', height:'80%'} });
+          .draw(dataKontr, { ...commonOptions, pieHole: 0.4 });
 
       // 2. Типи робіт
       const dataPie = google.visualization.arrayToDataTable([
         ['Тип', 'Хвилини'], ...Object.entries(stats.types)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_types'))
-          .draw(dataPie, { pieHole: 0.4, chartArea: {width:'90%', height:'80%'} });
+          .draw(dataPie, { ...commonOptions, pieHole: 0.4 });
 
       // 3. Виконавці
       const dataWorkers = google.visualization.arrayToDataTable([
@@ -122,14 +181,14 @@
         ...Object.entries(stats.workers).map(([k, v]) => [k, v, '#3498db'])
       ]);
       new google.visualization.ColumnChart(document.getElementById('chart_bar_workers'))
-          .draw(dataWorkers, { legend: 'none', chartArea: {width:'80%'} });
+          .draw(dataWorkers, { ...commonOptions, legend: 'none' });
 
       // 4. Проєкти
       const dataProj = google.visualization.arrayToDataTable([
         ['Проєкт', 'Хвилини'], ...Object.entries(stats.projects)
       ]);
       new google.visualization.BarChart(document.getElementById('chart_bar_projects'))
-          .draw(dataProj, { legend: 'none', colors: ['#2ecc71'] });
+          .draw(dataProj, { ...commonOptions, legend: 'none', colors: ['#2ecc71'] });
     }
   </script>
 </body>
