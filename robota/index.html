@@ -221,14 +221,20 @@
       localStorage.setItem('taskSortMode', document.getElementById('sortOrder').value);
     }
 
-    function loadTasks() {
+    
+function loadTasks(customSsId = null, customApiUrl = null) {
     if (!currentUserEmail) return;
 
-    // Запускаем проверку других подразделений
-    checkOtherDepartments(currentUserEmail);
+    const currentId = customSsId || '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
+    const currentApi = customApiUrl || API_URL;
+    
+    // Якщо завантажуємо інший відділ, показуємо візуальний індикатор
+    if (customSsId) {
+        document.getElementById('loader').innerText = "Завантаження завдань іншого підрозділу...";
+        document.getElementById('loader').style.display = 'block';
+    }
 
-    const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentId}/gviz/tq?tqx=out:json`;
 
     fetch(gvizUrl)
       .then(res => res.text())
@@ -264,10 +270,10 @@
             };
         }).filter(t => t.title && t.userEmail === currentUserEmail);
 
-        const sortMode = document.getElementById('sortOrder').value;
         tasks.sort((a, b) => {
           if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
           if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
+          const sortMode = document.getElementById('sortOrder').value;
           if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
           if (sortMode === 'status') {
             const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
@@ -287,12 +293,10 @@
             div.innerHTML = `
               <div class="task-info">
                 <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-                
                 <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
                   ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
                   ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
                 </div>
-
                 <strong>${task.title}</strong>
                 <small>Виконавець: ${task.worker || 'немає'}</small>
                 <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
@@ -305,13 +309,21 @@
                   <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
                   <option value="Видалити">Видалити</option>
                 </select>
-                <button onclick="updateStatus(${task.row})">Оновити</button>
+                <button onclick="updateStatus(${task.row}, '${currentApi}')">Оновити</button>
               </div>
             `;
             list.appendChild(div);
           });
         }
         applyFilter();
+        // Якщо завантажили чужий відділ, додаємо кнопку "Назад"
+        if (customSsId) {
+            const backBtn = document.createElement('button');
+            backBtn.innerText = "← Повернутись до моїх завдань";
+            backBtn.style = "width:100%; margin-bottom:15px; background:#95a5a6;";
+            backBtn.onclick = () => loadTasks();
+            list.prepend(backBtn);
+        }
       })
       .catch(err => {
         console.error("Помилка:", err);
@@ -319,23 +331,31 @@
       });
 }
 
-    function updateStatus(row) {
-      const btn = event.target;
-      const select = document.getElementById('status-' + row);
-      const newStatus = select.value;
-      btn.disabled = true;
-      btn.innerText = "⏳";
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
-      })
-      .then(res => res.json())
-      .then(out => {
-        if (out.result === "success") { loadTasks(); } 
-        else { alert("Помилка сервера: " + out.message); btn.disabled = false; btn.innerText = "Оновити"; }
-      })
-      .catch(err => { alert("Помилка мережі: " + err); btn.disabled = false; btn.innerText = "Оновити"; });
-    }
+
+function updateStatus(row, targetApiUrl = null) {
+  const btn = event.target;
+  const select = document.getElementById('status-' + row);
+  const newStatus = select.value;
+  const finalApiUrl = targetApiUrl || API_URL;
+  
+  btn.disabled = true;
+  btn.innerText = "⏳";
+  
+  fetch(finalApiUrl, {
+    method: "POST",
+    body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
+  })
+  .then(res => res.json())
+  .then(out => {
+    if (out.result === "success") { 
+        // Після оновлення залишаємося в тому ж підрозділі
+        const currentSsId = (finalApiUrl === API_URL) ? null : findSsIdByApi(finalApiUrl);
+        loadTasks(currentSsId, finalApiUrl); 
+    } 
+    else { alert("Помилка сервера: " + out.message); btn.disabled = false; btn.innerText = "Оновити"; }
+  })
+  .catch(err => { alert("Помилка мережі: " + err); btn.disabled = false; btn.innerText = "Оновити"; });
+}
 
     function getStatusClass(status) {
       switch(status) {
@@ -507,10 +527,12 @@ function submitNewTask() {
     }
 
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
-    function checkOtherDepartments(email) {
+function checkOtherDepartments(email) {
     const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    // Запрос к листу 'users', выбираем колонку A (email) и E (количество задач)
-    // sheet=users указывает на имя листа
+    // Додаємо запит v=user_metadata або просто розширюємо запит, щоб отримати метадані
+    // Але оскільки Google Visualization API не читає примітки (notes), 
+    // ми витягнемо конфігурацію через основний API або припустимо, що вона завантажується при старті.
+    
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users&tq=SELECT A, E WHERE A = '${email}'`;
 
     fetch(gvizUrl)
@@ -520,11 +542,16 @@ function submitNewTask() {
             const rows = json.table.rows;
 
             if (rows.length > 0) {
-                // Колонка E — это индекс 1 в нашем результате (так как мы выбрали только A и E)
                 const count = rows[0].c[1] ? rows[0].c[1].v : 0;
                 
                 if (count > 0) {
-                    renderOtherTasksAlert(count);
+                    // Отримуємо конфігурацію з примітки через основний API скрипта (doGet вже повертає структуру, можемо додати туди метадані)
+                    // Для швидкості рішення: робимо один запит до вашого GAS, щоб отримати ці посилання
+                    fetch(API_URL + "?action=getOtherDeptConfig")
+                        .then(r => r.json())
+                        .then(config => {
+                            renderOtherTasksAlert(count, config);
+                        });
                 } else {
                     removeOtherTasksAlert();
                 }
@@ -534,14 +561,25 @@ function submitNewTask() {
 }
 
 // Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
-function renderOtherTasksAlert(count) {
+function renderOtherTasksAlert(count, config) {
     const infoDiv = document.getElementById("userInfo");
-    // Проверяем, нет ли уже такого уведомления, чтобы не дублировать
     if (!document.getElementById("otherTasksAlert")) {
         const alertDiv = document.createElement("div");
         alertDiv.id = "otherTasksAlert";
-        alertDiv.style = "margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; font-size: 0.9em; text-align: center;";
-        alertDiv.innerHTML = `<strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі (${count})`;
+        alertDiv.style = "margin-top: 10px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; font-size: 0.9em; text-align: center;";
+        
+        // Визначаємо назву підрозділу з ключів конфігурації (напр. "marketing")
+        const deptKey = Object.keys(config).find(k => k.startsWith('ssId_')).replace('ssId_', '');
+        const otherSsId = config[`ssId_${deptKey}`];
+        const otherApiUrl = config[`API_URL_${deptKey}`];
+
+        alertDiv.innerHTML = `
+            <strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі (${count})<br>
+            <button onclick="loadTasks('${otherSsId}', '${otherApiUrl}')" 
+                    style="margin-top:10px; background:#f39c12; color:white; padding:5px 15px; border-radius:5px; border:none; cursor:pointer;">
+                Завантажити завдання підрозділу
+            </button>
+        `;
         infoDiv.appendChild(alertDiv);
     }
 }
