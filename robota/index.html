@@ -133,6 +133,7 @@
     let otherDeptConfig = null; // Для зберігання ID та URL іншого відділу
     let isOtherDeptLoaded = false; // Прапорець, чи ми зараз дивимось інший відділ
     let formConfig = []; // Глобальна змінна для зберігання структури
+    let currentOtherDeptName = ""; // Зберігатимемо назву підрозділу (напр. "marketing")
     // --- НАЛАШТУВАННЯ КОЛОНОК (Синхронізовано з TEST.js) ---
     // В JS масивах індексація починається з 0, тому віднімаємо 1 від номерів колонок таблиці
     const col_TITLE           = 2 - 1;   // B
@@ -527,12 +528,9 @@ function submitNewTask() {
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
 function checkOtherDepartments(email) {
     const mainSsId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    // URL для листа users (для получения названия отдела из E1 и количества задач)
     const usersUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=users`;
-    // URL для листа Departments (для получения конфига)
     const deptsUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=Departments`;
 
-    // 1. Сначала получаем данные пользователей и название отдела
     fetch(usersUrl)
         .then(res => res.text())
         .then(data => {
@@ -540,7 +538,6 @@ function checkOtherDepartments(email) {
             const cols = usersJson.table.cols;
             const rows = usersJson.table.rows;
 
-            // Название отдела в E1 (индекс 4). Проверяем и в label, и в данных первого ряда
             let targetDeptName = "";
             if (cols[4] && cols[4].label) {
                 targetDeptName = cols[4].label;
@@ -548,31 +545,24 @@ function checkOtherDepartments(email) {
                 targetDeptName = rows[0].c[4].v;
             }
 
-            if (!targetDeptName) {
-                console.warn("Назва підрозділу в E1 не знайдена");
-                return;
-            }
+            if (!targetDeptName) return;
+            
+            // Запам'ятовуємо назву для відображення в алерти
+            currentOtherDeptName = targetDeptName;
 
-            // 2. Теперь загружаем справочник Departments, чтобы найти конфиг по имени
             fetch(deptsUrl)
                 .then(res => res.text())
                 .then(deptData => {
                     const deptsJson = JSON.parse(deptData.substring(47, deptData.length - 2));
                     const deptRows = deptsJson.table.rows;
-
-                    // Ищем строку, где в колонке A (индекс 0) совпадает название отдела
                     const foundDept = deptRows.find(r => r.c[0] && r.c[0].v === targetDeptName);
 
                     if (foundDept && foundDept.c[1]) {
                         try {
                             otherDeptConfig = JSON.parse(foundDept.c[1].v);
-                            console.log("✅ Конфігурація завантажена для:", targetDeptName, otherDeptConfig);
-                        } catch (e) {
-                            console.error("❌ Помилка парсингу JSON у листі Departments:", e);
-                        }
+                        } catch (e) { console.error("JSON Error:", e); }
                     }
 
-                    // 3. После того как конфиг (возможно) найден, проверяем задачи для текущего юзера
                     const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
                     if (userRow) {
                         const count = userRow.c[4] ? userRow.c[4].v : 0;
@@ -601,13 +591,13 @@ function renderOtherTasksAlert(count) {
 
     if (!isOtherDeptLoaded) {
         alertDiv.innerHTML = `
-            <strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі (${count}) 
-            <button onclick="switchDepartment(true)" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px;">Завантажити</button>
+            <strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі <b>${currentOtherDeptName}</b> (${count}) 
+            <button onclick="switchDepartment(true)" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Завантажити</button>
         `;
     } else {
         alertDiv.innerHTML = `
-            <strong>📂 Ви переглядаєте інший підрозділ</strong> 
-            <button onclick="switchDepartment(false)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px;">Повернутися до основних</button>
+            <strong>📂 Підрозділ: ${currentOtherDeptName}</strong> 
+            <button onclick="switchDepartment(false)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Повернутися назад</button>
         `;
     }
 }
