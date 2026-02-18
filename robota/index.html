@@ -527,7 +527,7 @@ function submitNewTask() {
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
 function checkOtherDepartments(email) {
     const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    // Запитуємо email, кількість завдань (E) та примітку з заголовка (через v та q)
+    // Запитуємо лист 'users', щоб отримати дані користувача та конфігурацію в заголовку
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users`;
 
     fetch(gvizUrl)
@@ -537,11 +537,23 @@ function checkOtherDepartments(email) {
             const rows = json.table.rows;
             const cols = json.table.cols;
 
-            // Шукаємо конфігурацію у примітці або описі колонки E (індекс 4)
-            if (cols[4] && cols[4].p && cols[4].p.notes) {
+            // 1. Спроба взяти JSON з тексту комірки F1 (стовпець 5 у gviz)
+            let configRaw = null;
+            if (rows[0] && rows[0].c[5] && rows[0].c[5].v) {
+                configRaw = rows[0].c[5].v;
+            } 
+            // 2. Якщо F1 порожня, пробуємо примітку в E1 (стовпець 4)
+            else if (cols[4] && cols[4].p && cols[4].p.notes) {
+                configRaw = cols[4].p.notes;
+            }
+
+            if (configRaw) {
                 try {
-                    otherDeptConfig = JSON.parse(cols[4].p.notes);
-                } catch(e) { console.error("Помилка парсингу JSON у примітці E1"); }
+                    otherDeptConfig = JSON.parse(configRaw);
+                    console.log("Конфігурація завантажена:", otherDeptConfig);
+                } catch(e) { 
+                    console.error("Помилка парсингу JSON:", e); 
+                }
             }
 
             const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
@@ -554,7 +566,7 @@ function checkOtherDepartments(email) {
                 }
             }
         })
-        .catch(err => console.error("Помилка перевірки інших підрозділів:", err));
+        .catch(err => console.error("Помилка перевірки підрозділів:", err));
 }
 
 // Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
