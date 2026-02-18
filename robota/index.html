@@ -609,9 +609,15 @@ function switchDepartment(toOther) {
     }
     
     isOtherDeptLoaded = toOther;
+    
+    // ДОБАВЬТЕ ЭТУ СТРОКУ:
+    // Мы передаем 0 или любое число, так как при isOtherDeptLoaded = true 
+    // текст кнопки все равно изменится на "Повернутися назад"
+    renderOtherTasksAlert(0); 
+
     document.getElementById('taskList').innerHTML = '';
     document.getElementById('loader').style.display = 'block';
-    document.getElementById('loader').innerText = toOther ? "Завантаження маркетингу..." : "Завантаження основних завдань...";
+    document.getElementById('loader').innerText = toOther ? "Завантаження..." : "Завантаження основних завдань...";
     
     loadTasks();
 }
