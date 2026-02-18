@@ -527,7 +527,6 @@ function submitNewTask() {
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
 function checkOtherDepartments(email) {
     const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    // Запитуємо лист 'users', щоб отримати дані користувача та конфігурацію в заголовку
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users`;
 
     fetch(gvizUrl)
@@ -536,39 +535,52 @@ function checkOtherDepartments(email) {
             const json = JSON.parse(data.substring(47, data.length - 2));
             const rows = json.table.rows;
             const cols = json.table.cols;
+            
+            console.log("GViz Response Table:", json.table); // Подивіться в консоль, щоб побачити структуру
 
-            // 1. Спроба взяти JSON з тексту комірки F1 (стовпець 5 у gviz)
             let configRaw = null;
-            if (rows[0] && rows[0].c[5] && rows[0].c[5].v) {
-                configRaw = rows[0].c[5].v;
+
+            // 1. Спроба знайти в метаданих стовпця F (зазвичай індекс 5)
+            // GViz часто кладе текст першого рядка в label, якщо вважає його заголовком
+            if (cols[5] && cols[5].label && cols[5].label.includes('{')) {
+                configRaw = cols[5].label;
             } 
-            // 2. Якщо F1 порожня, пробуємо примітку в E1 (стовпець 4)
+            // 2. Спроба взяти з першого рядка даних
+            else if (rows[0] && rows[0].c[5] && rows[0].c[5].v) {
+                configRaw = rows[0].c[5].v;
+            }
+            // 3. Спроба взяти з примітки (якщо раптом вона там лишилася)
             else if (cols[4] && cols[4].p && cols[4].p.notes) {
                 configRaw = cols[4].p.notes;
             }
 
             if (configRaw) {
                 try {
-                    otherDeptConfig = JSON.parse(configRaw);
-                    console.log("Конфігурація завантажена:", otherDeptConfig);
+                    // Видаляємо зайві пробіли або символи, якщо вони є
+                    const cleanJson = configRaw.trim();
+                    otherDeptConfig = JSON.parse(cleanJson);
+                    console.log("✅ Конфігурація знайдена:", otherDeptConfig);
                 } catch(e) { 
-                    console.error("Помилка парсингу JSON:", e); 
+                    console.error("❌ Помилка парсингу JSON:", e, "Raw data:", configRaw); 
                 }
+            } else {
+                console.warn("⚠️ Конфігурацію не знайдено в жодному з джерел (F1 або примітка E1)");
             }
 
+            // Пошук кількості завдань для користувача
             const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
             if (userRow) {
                 const count = userRow.c[4] ? userRow.c[4].v : 0;
                 if (count > 0) {
                     renderOtherTasksAlert(count);
                 } else {
-                    removeOtherTasksAlert();
+                    const alertDiv = document.getElementById("otherTasksAlert");
+                    if (alertDiv && !isOtherDeptLoaded) alertDiv.remove();
                 }
             }
         })
-        .catch(err => console.error("Помилка перевірки підрозділів:", err));
+        .catch(err => console.error("Помилка fetch checkOtherDepartments:", err));
 }
-
 // Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
 function renderOtherTasksAlert(count) {
     const infoDiv = document.getElementById("userInfo");
