@@ -222,101 +222,102 @@
     }
 
     function loadTasks() {
-        if (!currentUserEmail) return;
+    if (!currentUserEmail) return;
 
-        const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
-        const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
+    // Запускаем проверку других подразделений
+    checkOtherDepartments(currentUserEmail);
 
-        fetch(gvizUrl)
-          .then(res => res.text())
-          .then(data => {
-            const json = JSON.parse(data.substring(47, data.length - 2));
-            let rows = json.table.rows;
-            const list = document.getElementById('taskList');
-            document.getElementById('loader').style.display = 'none';
-            list.innerHTML = '';
+    const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
 
-            let tasks = rows.map((row, index) => {
-              let rawDate = null;
-              // Використовуємо налаштовану колонку col_DATE
-              const dateCell = row.c[col_DATE];
-              if (dateCell && dateCell.v) {
-                const val = dateCell.v;
-                if (typeof val === 'string' && val.includes('Date')) {
-                  const parts = val.match(/\d+/g).map(Number);
-                  rawDate = new Date(parts[0], parts[1], parts[2]);
-                } else {
-                  rawDate = new Date(val);
-                }
-              }
+    fetch(gvizUrl)
+      .then(res => res.text())
+      .then(data => {
+        const json = JSON.parse(data.substring(47, data.length - 2));
+        let rows = json.table.rows;
+        const list = document.getElementById('taskList');
+        document.getElementById('loader').style.display = 'none';
+        list.innerHTML = '';
 
-                return {
-                  row: index + 2,
-                  title:     (row.c[col_TITLE] && row.c[col_TITLE].v) ? row.c[col_TITLE].v : '',
-                  project:   (row.c[col_PROJECT] && row.c[col_PROJECT].v) ? row.c[col_PROJECT].v : '', // Додано
-                  client:    (row.c[col_KONTRAHENT] && row.c[col_KONTRAHENT].v) ? row.c[col_KONTRAHENT].v : '', // Додано
-                  priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
-                  worker:    (row.c[col_WORKER] && row.c[col_WORKER].v) ? row.c[col_WORKER].v : '',
-                  status:    (row.c[col_STATUS] && row.c[col_STATUS].v) ? row.c[col_STATUS].v : '',
-                  userEmail: (row.c[col_TASK_EMAIL] && row.c[col_TASK_EMAIL].v) ? row.c[col_TASK_EMAIL].v : ''
-                };
-            }).filter(t => t.title && t.userEmail === currentUserEmail);
-
-            // Логіка сортування та рендеру...
-            const sortMode = document.getElementById('sortOrder').value;
-            tasks.sort((a, b) => {
-              if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
-              if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
-              if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
-              if (sortMode === 'status') {
-                const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
-                return (weights[a.status] || 99) - (weights[b.status] || 99);
-              }
-              return a.row - b.row;
-            });
-
-            if (tasks.length === 0) {
-              list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
+        let tasks = rows.map((row, index) => {
+          let rawDate = null;
+          const dateCell = row.c[col_DATE];
+          if (dateCell && dateCell.v) {
+            const val = dateCell.v;
+            if (typeof val === 'string' && val.includes('Date')) {
+              const parts = val.match(/\d+/g).map(Number);
+              rawDate = new Date(parts[0], parts[1], parts[2]);
             } else {
-              tasks.forEach(task => {
-                const div = document.createElement('div');
-                div.className = 'task-card';
-                div.setAttribute('data-status', task.status);
-                const dateString = task.priorityDate.getFullYear() === 2099 ? 'не вказано' : task.priorityDate.toLocaleDateString('uk-UA');
-                div.innerHTML = `
-                  <div class="task-info">
-                    <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-                    
-                    <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
-                      ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
-                      ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
-                    </div>
-
-                    <strong>${task.title}</strong>
-                    <small>Виконавець: ${task.worker || 'немає'}</small>
-                    <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
-                  </div>
-                  <div class="task-controls">
-                    <select id="status-${task.row}">
-                      <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                      <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                      <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                      <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-                      <option value="Видалити">Видалити</option>
-                    </select>
-                    <button onclick="updateStatus(${task.row})">Оновити</button>
-                  </div>
-                `;
-                list.appendChild(div);
-              });
+              rawDate = new Date(val);
             }
-            applyFilter();
-          })
-          .catch(err => {
-            console.error("Помилка:", err);
-            document.getElementById('loader').innerText = "Помилка завантаження";
+          }
+
+            return {
+              row: index + 2,
+              title:     (row.c[col_TITLE] && row.c[col_TITLE].v) ? row.c[col_TITLE].v : '',
+              project:   (row.c[col_PROJECT] && row.c[col_PROJECT].v) ? row.c[col_PROJECT].v : '',
+              client:    (row.c[col_KONTRAHENT] && row.c[col_KONTRAHENT].v) ? row.c[col_KONTRAHENT].v : '',
+              priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
+              worker:    (row.c[col_WORKER] && row.c[col_WORKER].v) ? row.c[col_WORKER].v : '',
+              status:    (row.c[col_STATUS] && row.c[col_STATUS].v) ? row.c[col_STATUS].v : '',
+              userEmail: (row.c[col_TASK_EMAIL] && row.c[col_TASK_EMAIL].v) ? row.c[col_TASK_EMAIL].v : ''
+            };
+        }).filter(t => t.title && t.userEmail === currentUserEmail);
+
+        const sortMode = document.getElementById('sortOrder').value;
+        tasks.sort((a, b) => {
+          if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
+          if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
+          if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
+          if (sortMode === 'status') {
+            const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
+            return (weights[a.status] || 99) - (weights[b.status] || 99);
+          }
+          return a.row - b.row;
+        });
+
+        if (tasks.length === 0) {
+          list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
+        } else {
+          tasks.forEach(task => {
+            const div = document.createElement('div');
+            div.className = 'task-card';
+            div.setAttribute('data-status', task.status);
+            const dateString = task.priorityDate.getFullYear() === 2099 ? 'не вказано' : task.priorityDate.toLocaleDateString('uk-UA');
+            div.innerHTML = `
+              <div class="task-info">
+                <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+                
+                <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
+                  ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
+                  ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
+                </div>
+
+                <strong>${task.title}</strong>
+                <small>Виконавець: ${task.worker || 'немає'}</small>
+                <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
+              </div>
+              <div class="task-controls">
+                <select id="status-${task.row}">
+                  <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+                  <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+                  <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+                  <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+                  <option value="Видалити">Видалити</option>
+                </select>
+                <button onclick="updateStatus(${task.row})">Оновити</button>
+              </div>
+            `;
+            list.appendChild(div);
           });
-      }
+        }
+        applyFilter();
+      })
+      .catch(err => {
+        console.error("Помилка:", err);
+        document.getElementById('loader').innerText = "Помилка завантаження";
+      });
+}
 
     function updateStatus(row) {
       const btn = event.target;
@@ -504,6 +505,52 @@ function submitNewTask() {
       
       input.value = value;
     }
+
+// функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
+    function checkOtherDepartments(email) {
+    const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
+    // Запрос к листу 'users', выбираем колонку A (email) и E (количество задач)
+    // sheet=users указывает на имя листа
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users&tq=SELECT A, E WHERE A = '${email}'`;
+
+    fetch(gvizUrl)
+        .then(res => res.text())
+        .then(data => {
+            const json = JSON.parse(data.substring(47, data.length - 2));
+            const rows = json.table.rows;
+
+            if (rows.length > 0) {
+                // Колонка E — это индекс 1 в нашем результате (так как мы выбрали только A и E)
+                const count = rows[0].c[1] ? rows[0].c[1].v : 0;
+                
+                if (count > 0) {
+                    renderOtherTasksAlert(count);
+                } else {
+                    removeOtherTasksAlert();
+                }
+            }
+        })
+        .catch(err => console.error("Помилка перевірки інших підрозділів:", err));
+}
+
+// Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
+function renderOtherTasksAlert(count) {
+    const infoDiv = document.getElementById("userInfo");
+    // Проверяем, нет ли уже такого уведомления, чтобы не дублировать
+    if (!document.getElementById("otherTasksAlert")) {
+        const alertDiv = document.createElement("div");
+        alertDiv.id = "otherTasksAlert";
+        alertDiv.style = "margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; font-size: 0.9em; text-align: center;";
+        alertDiv.innerHTML = `<strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі (${count})`;
+        infoDiv.appendChild(alertDiv);
+    }
+}
+
+      function removeOtherTasksAlert() {
+          const alert = document.getElementById("otherTasksAlert");
+          if (alert) alert.remove();
+      }
+
   </script>
 </body>
 </html>
