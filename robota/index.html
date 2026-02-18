@@ -526,60 +526,66 @@ function submitNewTask() {
 
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
 function checkOtherDepartments(email) {
-    const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users`;
+    const mainSsId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
+    // URL для листа users (для получения названия отдела из E1 и количества задач)
+    const usersUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=users`;
+    // URL для листа Departments (для получения конфига)
+    const deptsUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=Departments`;
 
-    fetch(gvizUrl)
+    // 1. Сначала получаем данные пользователей и название отдела
+    fetch(usersUrl)
         .then(res => res.text())
         .then(data => {
-            const json = JSON.parse(data.substring(47, data.length - 2));
-            const rows = json.table.rows;
-            const cols = json.table.cols;
-            
-            console.log("GViz Response Table:", json.table); // Подивіться в консоль, щоб побачити структуру
+            const usersJson = JSON.parse(data.substring(47, data.length - 2));
+            const cols = usersJson.table.cols;
+            const rows = usersJson.table.rows;
 
-            let configRaw = null;
-
-            // 1. Спроба знайти в метаданих стовпця F (зазвичай індекс 5)
-            // GViz часто кладе текст першого рядка в label, якщо вважає його заголовком
-            if (cols[5] && cols[5].label && cols[5].label.includes('{')) {
-                configRaw = cols[5].label;
-            } 
-            // 2. Спроба взяти з першого рядка даних
-            else if (rows[0] && rows[0].c[5] && rows[0].c[5].v) {
-                configRaw = rows[0].c[5].v;
-            }
-            // 3. Спроба взяти з примітки (якщо раптом вона там лишилася)
-            else if (cols[4] && cols[4].p && cols[4].p.notes) {
-                configRaw = cols[4].p.notes;
+            // Название отдела в E1 (индекс 4). Проверяем и в label, и в данных первого ряда
+            let targetDeptName = "";
+            if (cols[4] && cols[4].label) {
+                targetDeptName = cols[4].label;
+            } else if (rows[0] && rows[0].c[4]) {
+                targetDeptName = rows[0].c[4].v;
             }
 
-            if (configRaw) {
-                try {
-                    // Видаляємо зайві пробіли або символи, якщо вони є
-                    const cleanJson = configRaw.trim();
-                    otherDeptConfig = JSON.parse(cleanJson);
-                    console.log("✅ Конфігурація знайдена:", otherDeptConfig);
-                } catch(e) { 
-                    console.error("❌ Помилка парсингу JSON:", e, "Raw data:", configRaw); 
-                }
-            } else {
-                console.warn("⚠️ Конфігурацію не знайдено в жодному з джерел (F1 або примітка E1)");
+            if (!targetDeptName) {
+                console.warn("Назва підрозділу в E1 не знайдена");
+                return;
             }
 
-            // Пошук кількості завдань для користувача
-            const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
-            if (userRow) {
-                const count = userRow.c[4] ? userRow.c[4].v : 0;
-                if (count > 0) {
-                    renderOtherTasksAlert(count);
-                } else {
-                    const alertDiv = document.getElementById("otherTasksAlert");
-                    if (alertDiv && !isOtherDeptLoaded) alertDiv.remove();
-                }
-            }
+            // 2. Теперь загружаем справочник Departments, чтобы найти конфиг по имени
+            fetch(deptsUrl)
+                .then(res => res.text())
+                .then(deptData => {
+                    const deptsJson = JSON.parse(deptData.substring(47, deptData.length - 2));
+                    const deptRows = deptsJson.table.rows;
+
+                    // Ищем строку, где в колонке A (индекс 0) совпадает название отдела
+                    const foundDept = deptRows.find(r => r.c[0] && r.c[0].v === targetDeptName);
+
+                    if (foundDept && foundDept.c[1]) {
+                        try {
+                            otherDeptConfig = JSON.parse(foundDept.c[1].v);
+                            console.log("✅ Конфігурація завантажена для:", targetDeptName, otherDeptConfig);
+                        } catch (e) {
+                            console.error("❌ Помилка парсингу JSON у листі Departments:", e);
+                        }
+                    }
+
+                    // 3. После того как конфиг (возможно) найден, проверяем задачи для текущего юзера
+                    const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
+                    if (userRow) {
+                        const count = userRow.c[4] ? userRow.c[4].v : 0;
+                        if (count > 0) {
+                            renderOtherTasksAlert(count);
+                        } else {
+                            const alertDiv = document.getElementById("otherTasksAlert");
+                            if (alertDiv && !isOtherDeptLoaded) alertDiv.remove();
+                        }
+                    }
+                });
         })
-        .catch(err => console.error("Помилка fetch checkOtherDepartments:", err));
+        .catch(err => console.error("Помилка перевірки підрозділів:", err));
 }
 // Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
 function renderOtherTasksAlert(count) {
