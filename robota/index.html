@@ -563,16 +563,16 @@ function checkOtherDepartments(email) {
                         } catch (e) { console.error("JSON Error:", e); }
                     }
 
-const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
-if (userRow) {
-    const count = userRow.c[4] ? userRow.c[4].v : 0;
-    // Малюємо алерт, якщо є завдання АБО якщо ми вже всередині іншого підрозділу
-    if (count > 0 || isOtherDeptLoaded) {
-        renderOtherTasksAlert(count);
-    } else {
-        removeOtherTasksAlert();
-    }
-}
+                    const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
+                    if (userRow) {
+                        const count = userRow.c[4] ? userRow.c[4].v : 0;
+                        if (count > 0) {
+                            renderOtherTasksAlert(count);
+                        } else {
+                            const alertDiv = document.getElementById("otherTasksAlert");
+                            if (alertDiv && !isOtherDeptLoaded) alertDiv.remove();
+                        }
+                    }
                 });
         })
         .catch(err => console.error("Помилка перевірки підрозділів:", err));
@@ -590,13 +590,11 @@ function renderOtherTasksAlert(count) {
     }
 
     if (!isOtherDeptLoaded) {
-        alertDiv.style.background = "#fff3cd"; // Жовтий для уваги
         alertDiv.innerHTML = `
-            <strong>⚠️ Увага:</strong> Для вас є завдання в підрозділі <b>${currentOtherDeptName}</b> (${count}) 
+            <strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі <b>${currentOtherDeptName}</b> (${count}) 
             <button onclick="switchDepartment(true)" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Завантажити</button>
         `;
     } else {
-        alertDiv.style.background = "#e9ecef"; // Сірий для інформації
         alertDiv.innerHTML = `
             <strong>📂 Підрозділ: ${currentOtherDeptName}</strong> 
             <button onclick="switchDepartment(false)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Повернутися назад</button>
