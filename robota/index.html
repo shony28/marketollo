@@ -130,6 +130,8 @@
   <a href="https://2828.pp.ua/robota/statistics" class="back-link">statistics</a>
 
   <script>
+    let otherDeptConfig = null; // Для зберігання ID та URL іншого відділу
+    let isOtherDeptLoaded = false; // Прапорець, чи ми зараз дивимось інший відділ
     let formConfig = []; // Глобальна змінна для зберігання структури
     // --- НАЛАШТУВАННЯ КОЛОНОК (Синхронізовано з TEST.js) ---
     // В JS масивах індексація починається з 0, тому віднімаємо 1 від номерів колонок таблиці
@@ -224,11 +226,14 @@
     function loadTasks() {
     if (!currentUserEmail) return;
 
-    // Запускаем проверку других подразделений
-    checkOtherDepartments(currentUserEmail);
+    // Якщо ми в основному режимі, перевіряємо наявність завдань в інших
+    if (!isOtherDeptLoaded) {
+        checkOtherDepartments(currentUserEmail);
+    }
 
-    const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A'; 
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json`;
+    // Визначаємо, які параметри використовувати
+    const currentSsId = isOtherDeptLoaded ? otherDeptConfig.ssId_marketing : '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentSsId}/gviz/tq?tqx=out:json`;
 
     fetch(gvizUrl)
       .then(res => res.text())
@@ -264,6 +269,7 @@
             };
         }).filter(t => t.title && t.userEmail === currentUserEmail);
 
+        // ... код сортування залишається без змін ...
         const sortMode = document.getElementById('sortOrder').value;
         tasks.sort((a, b) => {
           if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
@@ -287,12 +293,10 @@
             div.innerHTML = `
               <div class="task-info">
                 <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-                
                 <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
                   ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
                   ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
                 </div>
-
                 <strong>${task.title}</strong>
                 <small>Виконавець: ${task.worker || 'немає'}</small>
                 <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
@@ -319,23 +323,37 @@
       });
 }
 
-    function updateStatus(row) {
+function updateStatus(row) {
       const btn = event.target;
       const select = document.getElementById('status-' + row);
       const newStatus = select.value;
+      
+      // Визначаємо цільовий API
+      const currentApiUrl = isOtherDeptLoaded ? otherDeptConfig.API_URL_marketing : API_URL;
+      
       btn.disabled = true;
       btn.innerText = "⏳";
-      fetch(API_URL, {
+      
+      fetch(currentApiUrl, {
         method: "POST",
         body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
       })
       .then(res => res.json())
       .then(out => {
-        if (out.result === "success") { loadTasks(); } 
-        else { alert("Помилка сервера: " + out.message); btn.disabled = false; btn.innerText = "Оновити"; }
+        if (out.result === "success") { 
+            loadTasks(); 
+        } else { 
+            alert("Помилка сервера: " + out.message); 
+            btn.disabled = false; 
+            btn.innerText = "Оновити"; 
+        }
       })
-      .catch(err => { alert("Помилка мережі: " + err); btn.disabled = false; btn.innerText = "Оновити"; });
-    }
+      .catch(err => { 
+          alert("Помилка мережі: " + err); 
+          btn.disabled = false; 
+          btn.innerText = "Оновити"; 
+      });
+}
 
     function getStatusClass(status) {
       switch(status) {
@@ -507,22 +525,28 @@ function submitNewTask() {
     }
 
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
-    function checkOtherDepartments(email) {
+function checkOtherDepartments(email) {
     const ssId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    // Запрос к листу 'users', выбираем колонку A (email) и E (количество задач)
-    // sheet=users указывает на имя листа
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users&tq=SELECT A, E WHERE A = '${email}'`;
+    // Запитуємо email, кількість завдань (E) та примітку з заголовка (через v та q)
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${ssId}/gviz/tq?tqx=out:json&sheet=users`;
 
     fetch(gvizUrl)
         .then(res => res.text())
         .then(data => {
             const json = JSON.parse(data.substring(47, data.length - 2));
             const rows = json.table.rows;
+            const cols = json.table.cols;
 
-            if (rows.length > 0) {
-                // Колонка E — это индекс 1 в нашем результате (так как мы выбрали только A и E)
-                const count = rows[0].c[1] ? rows[0].c[1].v : 0;
-                
+            // Шукаємо конфігурацію у примітці або описі колонки E (індекс 4)
+            if (cols[4] && cols[4].p && cols[4].p.notes) {
+                try {
+                    otherDeptConfig = JSON.parse(cols[4].p.notes);
+                } catch(e) { console.error("Помилка парсингу JSON у примітці E1"); }
+            }
+
+            const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
+            if (userRow) {
+                const count = userRow.c[4] ? userRow.c[4].v : 0;
                 if (count > 0) {
                     renderOtherTasksAlert(count);
                 } else {
@@ -536,14 +560,40 @@ function submitNewTask() {
 // Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
 function renderOtherTasksAlert(count) {
     const infoDiv = document.getElementById("userInfo");
-    // Проверяем, нет ли уже такого уведомления, чтобы не дублировать
-    if (!document.getElementById("otherTasksAlert")) {
-        const alertDiv = document.createElement("div");
+    let alertDiv = document.getElementById("otherTasksAlert");
+    
+    if (!alertDiv) {
+        alertDiv = document.createElement("div");
         alertDiv.id = "otherTasksAlert";
         alertDiv.style = "margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; font-size: 0.9em; text-align: center;";
-        alertDiv.innerHTML = `<strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі (${count})`;
         infoDiv.appendChild(alertDiv);
     }
+
+    if (!isOtherDeptLoaded) {
+        alertDiv.innerHTML = `
+            <strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі (${count}) 
+            <button onclick="switchDepartment(true)" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px;">Завантажити</button>
+        `;
+    } else {
+        alertDiv.innerHTML = `
+            <strong>📂 Ви переглядаєте інший підрозділ</strong> 
+            <button onclick="switchDepartment(false)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px;">Повернутися до основних</button>
+        `;
+    }
+}
+
+function switchDepartment(toOther) {
+    if (toOther && !otherDeptConfig) {
+        alert("Конфігурація іншого підрозділу не знайдена");
+        return;
+    }
+    
+    isOtherDeptLoaded = toOther;
+    document.getElementById('taskList').innerHTML = '';
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('loader').innerText = toOther ? "Завантаження маркетингу..." : "Завантаження основних завдань...";
+    
+    loadTasks();
 }
 
       function removeOtherTasksAlert() {
