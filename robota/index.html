@@ -148,37 +148,37 @@
     let currentUserEmail = null;
 
     // Решта логіки handleLogin, logout, checkSavedSession залишається...
-    function handleLogin(response) {
-        fetch(API_URL + "?action=login", {
-          method: "POST",
-          mode: "cors",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ token: response.credential })
-        })
-        .then(r => r.json())
-        .then(user => {
-          if (user.status === 'success') {
-            currentUserEmail = user.email;
-            localStorage.setItem('userEmail', user.email);
-            localStorage.setItem('userName', user.name);
-            document.getElementById("loginContainer").style.display = "none";
-            document.getElementById("appContainer").style.display = "block";
-            document.getElementById("userInfo").innerHTML = `
-              <strong>Привіт, ${user.name}!</strong><br>
-              <small>${user.email}</small><br>
-              <button onclick="logout()">Вийти</button>
-            `;
-            loadTasks();
-          } else {
-            alert("Помилка авторизації: " + user.message);
-          }
-        })
-        .catch(err => {
-          console.error("Помилка мережі:", err);
-          alert("Не вдалося підключитися до сервера");
-        });
-      }
+function handleLogin(response) {
+    const loginContainer = document.getElementById("loginContainer");
+    loginContainer.innerHTML = "⏳ Проверка авторизации...";
 
+    // Используем встроенный метод Google вместо fetch
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (result.status === 'success') {
+                currentUserEmail = result.email;
+                localStorage.setItem('userEmail', result.email);
+                localStorage.setItem('userName', result.name);
+                
+                document.getElementById("loginContainer").style.display = "none";
+                document.getElementById("appContainer").style.display = "block";
+                document.getElementById("userInfo").innerHTML = `
+                    <strong>${result.name}</strong><br>
+                    <small>${result.email}</small><br>
+                    <button onclick="logout()" style="margin-top:5px; padding:4px 8px; font-size:12px;">Выйти</button>
+                `;
+                loadTasks();
+                checkOtherDepartments(result.email);
+            } else {
+                alert("Ошибка входа: " + result.message);
+                location.reload(); // Перезагрузка для повторной попытки
+            }
+        })
+        .withFailureHandler(function(err) {
+            alert("Критическая ошибка сервера: " + err);
+        })
+        .handleLogin(response.credential); // Вызов функции из GAS.js
+}
     function logout() {
         currentUserEmail = null;
         localStorage.removeItem('userEmail');
