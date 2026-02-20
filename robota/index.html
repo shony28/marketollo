@@ -148,37 +148,37 @@
     let currentUserEmail = null;
 
     // Решта логіки handleLogin, logout, checkSavedSession залишається...
-function handleLogin(response) {
-    const loginContainer = document.getElementById("loginContainer");
-    loginContainer.innerHTML = "⏳ Проверка авторизации...";
+    function handleLogin(response) {
+        fetch(API_URL + "?action=login", {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ token: response.credential })
+        })
+        .then(r => r.json())
+        .then(user => {
+          if (user.status === 'success') {
+            currentUserEmail = user.email;
+            localStorage.setItem('userEmail', user.email);
+            localStorage.setItem('userName', user.name);
+            document.getElementById("loginContainer").style.display = "none";
+            document.getElementById("appContainer").style.display = "block";
+            document.getElementById("userInfo").innerHTML = `
+              <strong>Привіт, ${user.name}!</strong><br>
+              <small>${user.email}</small><br>
+              <button onclick="logout()">Вийти</button>
+            `;
+            loadTasks();
+          } else {
+            alert("Помилка авторизації: " + user.message);
+          }
+        })
+        .catch(err => {
+          console.error("Помилка мережі:", err);
+          alert("Не вдалося підключитися до сервера");
+        });
+      }
 
-    // Используем встроенный метод Google вместо fetch
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.status === 'success') {
-                currentUserEmail = result.email;
-                localStorage.setItem('userEmail', result.email);
-                localStorage.setItem('userName', result.name);
-                
-                document.getElementById("loginContainer").style.display = "none";
-                document.getElementById("appContainer").style.display = "block";
-                document.getElementById("userInfo").innerHTML = `
-                    <strong>${result.name}</strong><br>
-                    <small>${result.email}</small><br>
-                    <button onclick="logout()" style="margin-top:5px; padding:4px 8px; font-size:12px;">Выйти</button>
-                `;
-                loadTasks();
-                checkOtherDepartments(result.email);
-            } else {
-                alert("Ошибка входа: " + result.message);
-                location.reload(); // Перезагрузка для повторной попытки
-            }
-        })
-        .withFailureHandler(function(err) {
-            alert("Критическая ошибка сервера: " + err);
-        })
-        .handleLogin(response.credential); // Вызов функции из GAS.js
-}
     function logout() {
         currentUserEmail = null;
         localStorage.removeItem('userEmail');
@@ -225,68 +225,135 @@ function handleLogin(response) {
     }
 
     function loadTasks() {
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('taskList').innerHTML = '';
+    if (!currentUserEmail) return;
 
-    google.script.run
-      .withSuccessHandler(function(tasks) {
+    // Якщо ми в основному режимі, перевіряємо наявність завдань в інших
+    if (!isOtherDeptLoaded) {
+        checkOtherDepartments(currentUserEmail);
+    }
+
+    // Визначаємо, які параметри використовувати
+    const currentSsId = isOtherDeptLoaded ? otherDeptConfig.ssId_marketing : '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentSsId}/gviz/tq?tqx=out:json`;
+
+    fetch(gvizUrl)
+      .then(res => res.text())
+      .then(data => {
+        const json = JSON.parse(data.substring(47, data.length - 2));
+        let rows = json.table.rows;
         const list = document.getElementById('taskList');
         document.getElementById('loader').style.display = 'none';
-        
+        list.innerHTML = '';
+
+        let tasks = rows.map((row, index) => {
+          let rawDate = null;
+          const dateCell = row.c[col_DATE];
+          if (dateCell && dateCell.v) {
+            const val = dateCell.v;
+            if (typeof val === 'string' && val.includes('Date')) {
+              const parts = val.match(/\d+/g).map(Number);
+              rawDate = new Date(parts[0], parts[1], parts[2]);
+            } else {
+              rawDate = new Date(val);
+            }
+          }
+
+            return {
+              row: index + 2,
+              title:     (row.c[col_TITLE] && row.c[col_TITLE].v) ? row.c[col_TITLE].v : '',
+              project:   (row.c[col_PROJECT] && row.c[col_PROJECT].v) ? row.c[col_PROJECT].v : '',
+              client:    (row.c[col_KONTRAHENT] && row.c[col_KONTRAHENT].v) ? row.c[col_KONTRAHENT].v : '',
+              priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
+              worker:    (row.c[col_WORKER] && row.c[col_WORKER].v) ? row.c[col_WORKER].v : '',
+              status:    (row.c[col_STATUS] && row.c[col_STATUS].v) ? row.c[col_STATUS].v : '',
+              userEmail: (row.c[col_TASK_EMAIL] && row.c[col_TASK_EMAIL].v) ? row.c[col_TASK_EMAIL].v : ''
+            };
+        }).filter(t => t.title && t.userEmail === currentUserEmail);
+
+        // ... код сортування залишається без змін ...
+        const sortMode = document.getElementById('sortOrder').value;
+        tasks.sort((a, b) => {
+          if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
+          if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
+          if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
+          if (sortMode === 'status') {
+            const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
+            return (weights[a.status] || 99) - (weights[b.status] || 99);
+          }
+          return a.row - b.row;
+        });
+
         if (tasks.length === 0) {
           list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
-          return;
+        } else {
+          tasks.forEach(task => {
+            const div = document.createElement('div');
+            div.className = 'task-card';
+            div.setAttribute('data-status', task.status);
+            const dateString = task.priorityDate.getFullYear() === 2099 ? 'не вказано' : task.priorityDate.toLocaleDateString('uk-UA');
+            div.innerHTML = `
+              <div class="task-info">
+                <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+                <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
+                  ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
+                  ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
+                </div>
+                <strong>${task.title}</strong>
+                <small>Виконавець: ${task.worker || 'немає'}</small>
+                <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
+              </div>
+              <div class="task-controls">
+                <select id="status-${task.row}">
+                  <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+                  <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+                  <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+                  <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+                  <option value="Видалити">Видалити</option>
+                </select>
+                <button onclick="updateStatus(${task.row})">Оновити</button>
+              </div>
+            `;
+            list.appendChild(div);
+          });
         }
-
-        tasks.forEach(task => {
-          const div = document.createElement('div');
-          div.className = 'task-card';
-          div.setAttribute('data-status', task.status);
-          
-          div.innerHTML = `
-            <div class="task-info">
-              <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-              <strong>${task.title}</strong>
-              <small>Проєкт: ${task.project || '-'}</small>
-            </div>
-            <div class="task-controls">
-              <select id="status-${task.row}">
-                <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-              </select>
-              <button onclick="updateStatus(${task.row})">Оновити</button>
-            </div>`;
-          list.appendChild(div);
-        });
+        applyFilter();
       })
-      .withFailureHandler(function(err) {
-        alert("Помилка завантаження: " + err.message);
-      })
-      .getMyTasks(); // Виклик функції з GAS.js
+      .catch(err => {
+        console.error("Помилка:", err);
+        document.getElementById('loader').innerText = "Помилка завантаження";
+      });
 }
 
 function updateStatus(row) {
-    const select = document.getElementById('status-' + row);
-    const newStatus = select.value;
-    const btn = event.target;
-    
-    btn.disabled = true;
-    btn.innerText = "⏳";
-
-    google.script.run
-      .withSuccessHandler(function(response) {
-        btn.disabled = false;
-        btn.innerText = "Оновити";
-        loadTasks(); // Перезавантажуємо список
+      const btn = event.target;
+      const select = document.getElementById('status-' + row);
+      const newStatus = select.value;
+      
+      // Визначаємо цільовий API
+      const currentApiUrl = isOtherDeptLoaded ? otherDeptConfig.API_URL_marketing : API_URL;
+      
+      btn.disabled = true;
+      btn.innerText = "⏳";
+      
+      fetch(currentApiUrl, {
+        method: "POST",
+        body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
       })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.innerText = "Помилка";
-        alert(err.message);
+      .then(res => res.json())
+      .then(out => {
+        if (out.result === "success") { 
+            loadTasks(); 
+        } else { 
+            alert("Помилка сервера: " + out.message); 
+            btn.disabled = false; 
+            btn.innerText = "Оновити"; 
+        }
       })
-      .updateTaskStatus(row, newStatus); // Виклик функції з GAS.js
+      .catch(err => { 
+          alert("Помилка мережі: " + err); 
+          btn.disabled = false; 
+          btn.innerText = "Оновити"; 
+      });
 }
 
     function getStatusClass(status) {
