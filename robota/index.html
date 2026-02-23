@@ -620,55 +620,7 @@ function switchDepartment(deptName) {
     document.getElementById('loader').innerText = activeDept ? "Завантаження..." : "Завантаження основних завдань...";
     loadTasks();
 }
-// Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
-function renderOtherTasksAlert(count) {
-    const infoDiv = document.getElementById("userInfo");
-    let alertDiv = document.getElementById("otherTasksAlert");
-    
-    if (!alertDiv) {
-        alertDiv = document.createElement("div");
-        alertDiv.id = "otherTasksAlert";
-        alertDiv.style = "margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; font-size: 0.9em; text-align: center;";
-        infoDiv.appendChild(alertDiv);
-    }
 
-    if (!isOtherDeptLoaded) {
-        alertDiv.innerHTML = `
-            <strong>⚠️ Увага:</strong> Для вас є завдання в іншому підрозділі <b>${currentOtherDeptName}</b> (${count}) 
-            <button onclick="switchDepartment(true)" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Завантажити</button>
-        `;
-    } else {
-        alertDiv.innerHTML = `
-            <strong>📂 Підрозділ: ${currentOtherDeptName}</strong> 
-            <button onclick="switchDepartment(false)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Повернутися назад</button>
-        `;
-    }
-}
-
-function switchDepartment(toOther) {
-    if (toOther && !otherDeptConfig) {
-        alert("Конфігурація іншого підрозділу не знайдена");
-        return;
-    }
-    
-    isOtherDeptLoaded = toOther;
-    
-    // ДОБАВЬТЕ ЭТУ СТРОКУ:
-    // Мы передаем 0 или любое число, так как при isOtherDeptLoaded = true 
-    // текст кнопки все равно изменится на "Повернутися назад"
-    renderOtherTasksAlert(0); 
-
-    document.getElementById('taskList').innerHTML = '';
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('loader').innerText = toOther ? "Завантаження..." : "Завантаження основних завдань...";
-    
-    loadTasks();
-}
-
-      function removeOtherTasksAlert() {
-          const alert = document.getElementById("otherTasksAlert");
-          if (alert) alert.remove();
-      }
 
   </script>
 </body>
