@@ -130,7 +130,8 @@
   <a href="https://2828.pp.ua/robota/statistics" class="back-link">statistics</a>
 
   <script>
-    let otherDeptConfig = null; // Для зберігання ID та URL іншого відділу
+    let deptConfigs = {};       // { deptName: { ssId, API_URL, ... } }
+    let activeDept = null;      // null = основний відділ, або назва іншого
     let isOtherDeptLoaded = false; // Прапорець, чи ми зараз дивимось інший відділ
     let formConfig = []; // Глобальна змінна для зберігання структури
     let currentOtherDeptName = ""; // Зберігатимемо назву підрозділу (напр. "marketing")
@@ -227,13 +228,12 @@
     function loadTasks() {
     if (!currentUserEmail) return;
 
-    // Якщо ми в основному режимі, перевіряємо наявність завдань в інших
-    if (!isOtherDeptLoaded) {
+    if (!activeDept) {
         checkOtherDepartments(currentUserEmail);
     }
 
-    // Визначаємо, які параметри використовувати
-    const currentSsId = isOtherDeptLoaded ? otherDeptConfig.ssId_marketing : '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
+    const cfg = activeDept ? deptConfigs[activeDept] : null;
+    const currentSsId = cfg ? cfg.ssId : '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentSsId}/gviz/tq?tqx=out:json`;
 
     fetch(gvizUrl)
@@ -329,8 +329,8 @@ function updateStatus(row) {
       const select = document.getElementById('status-' + row);
       const newStatus = select.value;
       
-      // Визначаємо цільовий API
-      const currentApiUrl = isOtherDeptLoaded ? otherDeptConfig.API_URL_marketing : API_URL;
+      const cfg = activeDept ? deptConfigs[activeDept] : null;
+      const currentApiUrl = cfg ? cfg.API_URL : API_URL;
       
       btn.disabled = true;
       btn.innerText = "⏳";
@@ -531,51 +531,94 @@ function checkOtherDepartments(email) {
     const usersUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=users`;
     const deptsUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=Departments`;
 
-    fetch(usersUrl)
-        .then(res => res.text())
-        .then(data => {
-            const usersJson = JSON.parse(data.substring(47, data.length - 2));
-            const cols = usersJson.table.cols;
-            const rows = usersJson.table.rows;
+    // Завантажуємо обидва запити паралельно
+    Promise.all([
+        fetch(usersUrl).then(r => r.text()),
+        fetch(deptsUrl).then(r => r.text())
+    ])
+    .then(([usersRaw, deptsRaw]) => {
+        const usersJson = JSON.parse(usersRaw.substring(47, usersRaw.length - 2));
+        const deptsJson = JSON.parse(deptsRaw.substring(47, deptsRaw.length - 2));
 
-            let targetDeptName = "";
-            if (cols[4] && cols[4].label) {
-                targetDeptName = cols[4].label;
-            } else if (rows[0] && rows[0].c[4]) {
-                targetDeptName = rows[0].c[4].v;
+        // Будуємо словник конфігів відділів з листа Departments
+        deptConfigs = {};
+        deptsJson.table.rows.forEach(r => {
+            if (r.c[0] && r.c[1]) {
+                try {
+                    deptConfigs[r.c[0].v] = JSON.parse(r.c[1].v);
+                } catch(e) { console.error("Departments JSON error:", e); }
             }
+        });
 
-            if (!targetDeptName) return;
-            
-            // Запам'ятовуємо назву для відображення в алерти
-            currentOtherDeptName = targetDeptName;
+        // Знаходимо рядок поточного користувача в users
+        const cols = usersJson.table.cols;   // [{label: "Email"}, {label: "Name"}, ..., {label: "Marketing"}, ...]
+        const userRow = usersJson.table.rows.find(r => r.c[0] && r.c[0].v === email);
+        if (!userRow) return;
 
-            fetch(deptsUrl)
-                .then(res => res.text())
-                .then(deptData => {
-                    const deptsJson = JSON.parse(deptData.substring(47, deptData.length - 2));
-                    const deptRows = deptsJson.table.rows;
-                    const foundDept = deptRows.find(r => r.c[0] && r.c[0].v === targetDeptName);
+        // Колонки з індексу 4 (E) і далі — це відділи (назва колонки = назва відділу)
+        // Завантажуємо тільки потрібні стовпці (cols від 4+)
+        const alerts = [];
+        for (let i = 4; i < cols.length; i++) {
+            const deptName = cols[i] ? cols[i].label : null;
+            if (!deptName) continue;
+            const count = userRow.c[i] ? (userRow.c[i].v || 0) : 0;
+            if (count > 0 && deptConfigs[deptName]) {
+                alerts.push({ deptName, count });
+            }
+        }
 
-                    if (foundDept && foundDept.c[1]) {
-                        try {
-                            otherDeptConfig = JSON.parse(foundDept.c[1].v);
-                        } catch (e) { console.error("JSON Error:", e); }
-                    }
+        renderAllDeptAlerts(alerts);
+    })
+    .catch(err => console.error("Помилка перевірки підрозділів:", err));
+}
 
-                    const userRow = rows.find(r => r.c[0] && r.c[0].v === email);
-                    if (userRow) {
-                        const count = userRow.c[4] ? userRow.c[4].v : 0;
-                        if (count > 0) {
-                            renderOtherTasksAlert(count);
-                        } else {
-                            const alertDiv = document.getElementById("otherTasksAlert");
-                            if (alertDiv && !isOtherDeptLoaded) alertDiv.remove();
-                        }
-                    }
-                });
-        })
-        .catch(err => console.error("Помилка перевірки підрозділів:", err));
+function renderAllDeptAlerts(alerts) {
+    // Видаляємо старі алерти
+    document.querySelectorAll('.dept-alert').forEach(el => el.remove());
+
+    if (activeDept) {
+        // Показуємо кнопку "Повернутися"
+        renderActiveDeptAlert();
+        return;
+    }
+
+    const infoDiv = document.getElementById("userInfo");
+    alerts.forEach(({ deptName, count }) => {
+        const alertDiv = document.createElement("div");
+        alertDiv.className = "dept-alert";
+        alertDiv.style = "margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; font-size: 0.9em; text-align: center;";
+        alertDiv.innerHTML = `
+            <strong>⚠️ Увага:</strong> Для вас є завдання в підрозділі <b>${deptName}</b> (${count})
+            <button onclick="switchDepartment('${deptName}')" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Завантажити</button>
+        `;
+        infoDiv.appendChild(alertDiv);
+    });
+}
+
+function renderActiveDeptAlert() {
+    const infoDiv = document.getElementById("userInfo");
+    const alertDiv = document.createElement("div");
+    alertDiv.className = "dept-alert";
+    alertDiv.style = "margin-top: 10px; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; color: #155724; font-size: 0.9em; text-align: center;";
+    alertDiv.innerHTML = `
+        <strong>📂 Підрозділ: ${activeDept}</strong>
+        <button onclick="switchDepartment(null)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Повернутися назад</button>
+    `;
+    infoDiv.appendChild(alertDiv);
+}
+
+function switchDepartment(deptName) {
+    if (deptName && !deptConfigs[deptName]) {
+        alert("Конфігурація підрозділу не знайдена");
+        return;
+    }
+    activeDept = deptName;
+    document.querySelectorAll('.dept-alert').forEach(el => el.remove());
+    if (activeDept) renderActiveDeptAlert();
+    document.getElementById('taskList').innerHTML = '';
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('loader').innerText = activeDept ? "Завантаження..." : "Завантаження основних завдань...";
+    loadTasks();
 }
 // Допоміжні функції для інтерфейсу. Ці функції керують відображенням повідомлення у блоці користувача.
 function renderOtherTasksAlert(count) {
