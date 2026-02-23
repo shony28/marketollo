@@ -531,7 +531,6 @@ function checkOtherDepartments(email) {
     const usersUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=users`;
     const deptsUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=Departments`;
 
-    // Завантажуємо обидва запити паралельно
     Promise.all([
         fetch(usersUrl).then(r => r.text()),
         fetch(deptsUrl).then(r => r.text())
@@ -540,23 +539,23 @@ function checkOtherDepartments(email) {
         const usersJson = JSON.parse(usersRaw.substring(47, usersRaw.length - 2));
         const deptsJson = JSON.parse(deptsRaw.substring(47, deptsRaw.length - 2));
 
-        // Будуємо словник конфігів відділів з листа Departments
+        // Будуємо словник конфігів: A=назва, B=ssId, C=API_URL
         deptConfigs = {};
         deptsJson.table.rows.forEach(r => {
-            if (r.c[0] && r.c[1]) {
-                try {
-                    deptConfigs[r.c[0].v] = JSON.parse(r.c[1].v);
-                } catch(e) { console.error("Departments JSON error:", e); }
+            if (r.c[0] && r.c[1] && r.c[2]) {
+                const name   = r.c[0].v;
+                const ssId   = r.c[1].v;
+                const apiUrl = r.c[2].v;
+                if (name && ssId && apiUrl) {
+                    deptConfigs[name] = { ssId, API_URL: apiUrl };
+                }
             }
         });
 
-        // Знаходимо рядок поточного користувача в users
-        const cols = usersJson.table.cols;   // [{label: "Email"}, {label: "Name"}, ..., {label: "Marketing"}, ...]
+        const cols = usersJson.table.cols;
         const userRow = usersJson.table.rows.find(r => r.c[0] && r.c[0].v === email);
         if (!userRow) return;
 
-        // Колонки з індексу 4 (E) і далі — це відділи (назва колонки = назва відділу)
-        // Завантажуємо тільки потрібні стовпці (cols від 4+)
         const alerts = [];
         for (let i = 4; i < cols.length; i++) {
             const deptName = cols[i] ? cols[i].label : null;
