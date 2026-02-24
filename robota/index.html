@@ -130,6 +130,10 @@
   <a href="https://2828.pp.ua/robota/statistics" class="back-link">statistics</a>
 
   <script>
+    // Частота обновления в минутах (например, 5 минут)
+    const AUTO_REFRESH_MINUTES = 1; 
+    let refreshInterval = null;
+
     let deptConfigs = {};       // { deptName: { ssId, API_URL, ... } }
     let activeDept = null;      // null = основний відділ, або назва іншого
     let isOtherDeptLoaded = false; // Прапорець, чи ми зараз дивимось інший відділ
@@ -149,66 +153,68 @@
     let currentUserEmail = null;
 
     // Решта логіки handleLogin, logout, checkSavedSession залишається...
-    function handleLogin(response) {
-        fetch(API_URL + "?action=login", {
-          method: "POST",
-          mode: "cors",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ token: response.credential })
-        })
-        .then(r => r.json())
-        .then(user => {
-          if (user.status === 'success') {
-            currentUserEmail = user.email;
-            localStorage.setItem('userEmail', user.email);
-            localStorage.setItem('userName', user.name);
-            document.getElementById("loginContainer").style.display = "none";
-            document.getElementById("appContainer").style.display = "block";
-            document.getElementById("userInfo").innerHTML = `
-              <strong>Привіт, ${user.name}!</strong><br>
-              <small>${user.email}</small><br>
-              <button onclick="logout()">Вийти</button>
-            `;
-            loadTasks();
-          } else {
-            alert("Помилка авторизації: " + user.message);
-          }
-        })
-        .catch(err => {
-          console.error("Помилка мережі:", err);
-          alert("Не вдалося підключитися до сервера");
-        });
+function handleLogin(response) {
+    fetch(API_URL + "?action=login", {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ token: response.credential })
+    })
+    .then(r => r.json())
+    .then(user => {
+      if (user.status === 'success') {
+        currentUserEmail = user.email;
+        localStorage.setItem('userEmail', user.email);
+        localStorage.setItem('userName', user.name);
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("appContainer").style.display = "block";
+        document.getElementById("userInfo").innerHTML = `
+          <strong>Привіт, ${user.name}!</strong><br>
+          <small>${user.email}</small><br>
+          <button onclick="logout()">Вийти</button>
+        `;
+        loadTasks();
+        startAutoRefresh(); // Запускаємо автооновлення
+      } else {
+        alert("Помилка авторизації: " + user.message);
       }
+    })
+    .catch(err => {
+      console.error("Помилка мережі:", err);
+      alert("Не вдалося підключитися до сервера");
+    });
+}
+function logout() {
+    currentUserEmail = null;
+    if (refreshInterval) clearInterval(refreshInterval); // Зупиняємо автооновлення
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    document.getElementById("loginContainer").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+    document.getElementById("taskList").innerHTML = "";
+}
 
-    function logout() {
-        currentUserEmail = null;
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userName');
-        document.getElementById("loginContainer").style.display = "flex";
-        document.getElementById("appContainer").style.display = "none";
-        document.getElementById("taskList").innerHTML = "";
+function checkSavedSession() {
+    const savedEmail = localStorage.getItem('userEmail');
+    const savedName = localStorage.getItem('userName');
+    const savedFilter = localStorage.getItem('hideDoneSettings');
+    if (savedFilter !== null) document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
+    const savedSort = localStorage.getItem('taskSortMode');
+    if (savedSort !== null) document.getElementById('sortOrder').value = savedSort;
+    
+    if (savedEmail && savedName) {
+        currentUserEmail = savedEmail;
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("appContainer").style.display = "block";
+        document.getElementById("userInfo").innerHTML = `
+            <strong>Привіт, ${savedName}!</strong><br>
+            <small>${savedEmail}</small><br>
+            <button onclick="logout()">Вийти</button>
+        `;
+        loadTasks();
+        startAutoRefresh(); // Запускаємо автооновлення
     }
-
-    function checkSavedSession() {
-        const savedEmail = localStorage.getItem('userEmail');
-        const savedName = localStorage.getItem('userName');
-        const savedFilter = localStorage.getItem('hideDoneSettings');
-        if (savedFilter !== null) document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
-        const savedSort = localStorage.getItem('taskSortMode');
-        if (savedSort !== null) document.getElementById('sortOrder').value = savedSort;
-        
-        if (savedEmail && savedName) {
-            currentUserEmail = savedEmail;
-            document.getElementById("loginContainer").style.display = "none";
-            document.getElementById("appContainer").style.display = "block";
-            document.getElementById("userInfo").innerHTML = `
-                <strong>Привіт, ${savedName}!</strong><br>
-                <small>${savedEmail}</small><br>
-                <button onclick="logout()">Вийти</button>
-            `;
-            loadTasks();
-        }
-    }
+}
 
     window.addEventListener('DOMContentLoaded', checkSavedSession);
 
@@ -618,6 +624,16 @@ function switchDepartment(deptName) {
     document.getElementById('loader').style.display = 'block';
     document.getElementById('loader').innerText = activeDept ? "Завантаження..." : "Завантаження основних завдань...";
     loadTasks();
+}
+
+//функция для управления таймером
+function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    
+    refreshInterval = setInterval(() => {
+        console.log("Автоматичне оновлення завдань...");
+        loadTasks();
+    }, AUTO_REFRESH_MINUTES * 60 * 1000);
 }
 
 
