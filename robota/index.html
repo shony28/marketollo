@@ -240,7 +240,7 @@ function checkSavedSession() {
 
     const cfg = activeDept ? deptConfigs[activeDept] : null;
     const currentSsId = cfg ? cfg.ssId : '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentSsId}/gviz/tq?tqx=out:json`;
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentSsId}/gviz/tq?tqx=out:json&tq=SELECT%20*`;
 
     fetch(gvizUrl)
       .then(res => res.text())
