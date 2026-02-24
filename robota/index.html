@@ -314,7 +314,7 @@ function checkSavedSession() {
                   <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
                   <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
                   <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-                  <option value="Видалити">Видалити</option>
+                  
                 </select>
                 <button onclick="updateStatus(${task.row})">Оновити</button>
               </div>
