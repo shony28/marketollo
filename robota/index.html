@@ -211,7 +211,7 @@
 
   <script>
     // Частота обновления в минутах (например, 5 минут)
-    const AUTO_REFRESH_MINUTES = 10; 
+    const AUTO_REFRESH_MINUTES = 15; 
     let refreshInterval = null;
 
     let deptConfigs = {};       // { deptName: { ssId, API_URL, ... } }
@@ -362,6 +362,7 @@ function loadTasks() {
           title:        row.title,
           project:      row.project,
           client:       row.client,
+          assignedBy:   row.assignedBy,
           worker:       row.worker,
           status:       row.status,
           userEmail:    row.userEmail,
@@ -461,7 +462,7 @@ function createTaskCard(task) {
         ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
       </div>
       <strong>${task.title}</strong>
-      <small>Виконавець: ${task.worker || 'немає'}</small>
+      <small>Призначив: ${task.assignedBy || 'немає'}</small>
       <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
     </div>
     <div class="task-controls">
