@@ -232,102 +232,94 @@ function checkSavedSession() {
     }
 
     function loadTasks() {
-    if (!currentUserEmail) return;
+  if (!currentUserEmail) return;
 
-    if (!activeDept) {
-        checkOtherDepartments(currentUserEmail);
-    }
+  if (!activeDept) {
+    checkOtherDepartments(currentUserEmail);
+  }
 
-    const cfg = activeDept ? deptConfigs[activeDept] : null;
-    const currentSsId = cfg ? cfg.ssId : '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${currentSsId}/gviz/tq?tqx=out:json`;
+  const cfg = activeDept ? deptConfigs[activeDept] : null;
+  const currentApiUrl = cfg ? cfg.API_URL : API_URL;
 
-    fetch(gvizUrl)
-      .then(res => res.text())
-      .then(data => {
-        const json = JSON.parse(data.substring(47, data.length - 2));
-        let rows = json.table.rows;
-        const list = document.getElementById('taskList');
-        document.getElementById('loader').style.display = 'none';
-        list.innerHTML = '';
+  fetch(currentApiUrl + "?action=getTasks")
+    .then(res => res.json())
+    .then(rows => {
+      const list = document.getElementById('taskList');
+      document.getElementById('loader').style.display = 'none';
+      list.innerHTML = '';
 
-        let tasks = rows.map((row, index) => {
-          let rawDate = null;
-          const dateCell = row.c[col_DATE];
-          if (dateCell && dateCell.v) {
-            const val = dateCell.v;
-            if (typeof val === 'string' && val.includes('Date')) {
-              const parts = val.match(/\d+/g).map(Number);
-              rawDate = new Date(parts[0], parts[1], parts[2]);
-            } else {
-              rawDate = new Date(val);
-            }
-          }
-
-            return {
-              row: index + 2,
-              title:     (row.c[col_TITLE] && row.c[col_TITLE].v) ? row.c[col_TITLE].v : '',
-              project:   (row.c[col_PROJECT] && row.c[col_PROJECT].v) ? row.c[col_PROJECT].v : '',
-              client:    (row.c[col_KONTRAHENT] && row.c[col_KONTRAHENT].v) ? row.c[col_KONTRAHENT].v : '',
-              priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31),
-              worker:    (row.c[col_WORKER] && row.c[col_WORKER].v) ? row.c[col_WORKER].v : '',
-              status:    (row.c[col_STATUS] && row.c[col_STATUS].v) ? row.c[col_STATUS].v : '',
-              userEmail: (row.c[col_TASK_EMAIL] && row.c[col_TASK_EMAIL].v) ? row.c[col_TASK_EMAIL].v : ''
-            };
-        }).filter(t => t.title && t.userEmail === currentUserEmail);
-
-        // ... код сортування залишається без змін ...
-        const sortMode = document.getElementById('sortOrder').value;
-        tasks.sort((a, b) => {
-          if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
-          if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
-          if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
-          if (sortMode === 'status') {
-            const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
-            return (weights[a.status] || 99) - (weights[b.status] || 99);
-          }
-          return a.row - b.row;
-        });
-
-        if (tasks.length === 0) {
-          list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
-        } else {
-          tasks.forEach(task => {
-            const div = document.createElement('div');
-            div.className = 'task-card';
-            div.setAttribute('data-status', task.status);
-            const dateString = task.priorityDate.getFullYear() === 2099 ? 'не вказано' : task.priorityDate.toLocaleDateString('uk-UA');
-            div.innerHTML = `
-              <div class="task-info">
-                <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-                <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
-                  ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
-                  ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
-                </div>
-                <strong>${task.title}</strong>
-                <small>Виконавець: ${task.worker || 'немає'}</small>
-                <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
-              </div>
-              <div class="task-controls">
-                <select id="status-${task.row}">
-                  <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                  <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                  <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                  <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-                  
-                </select>
-                <button onclick="updateStatus(${task.row})">Оновити</button>
-              </div>
-            `;
-            list.appendChild(div);
-          });
+      let tasks = rows.map(row => {
+        // date приходить як "YYYY-MM-DD" або порожній рядок
+        let rawDate = null;
+        if (row.date) {
+          // new Date("YYYY-MM-DD") трактує як UTC, додаємо T00:00 щоб уникнути зсуву
+          rawDate = new Date(row.date + 'T00:00:00');
         }
-        applyFilter();
-      })
-      .catch(err => {
-        console.error("Помилка:", err);
-        document.getElementById('loader').innerText = "Помилка завантаження";
+
+        return {
+          row:          row.row,
+          title:        row.title,
+          project:      row.project,
+          client:       row.client,
+          worker:       row.worker,
+          status:       row.status,
+          userEmail:    row.userEmail,
+          priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31)
+        };
+      }).filter(t => t.title && t.userEmail === currentUserEmail);
+
+      const sortMode = document.getElementById('sortOrder').value;
+      tasks.sort((a, b) => {
+        if (a.status === 'Виконано' && b.status !== 'Виконано') return 1;
+        if (a.status !== 'Виконано' && b.status === 'Виконано') return -1;
+        if (sortMode === 'priority') return a.priorityDate - b.priorityDate;
+        if (sortMode === 'status') {
+          const weights = { "В процесі": 1, "Пауза": 2, "Нове": 3, "Виконано": 4 };
+          return (weights[a.status] || 99) - (weights[b.status] || 99);
+        }
+        return a.row - b.row;
       });
+
+      if (tasks.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
+      } else {
+        tasks.forEach(task => {
+          const div = document.createElement('div');
+          div.className = 'task-card';
+          div.setAttribute('data-status', task.status);
+          const dateString = task.priorityDate.getFullYear() === 2099
+            ? 'не вказано'
+            : task.priorityDate.toLocaleDateString('uk-UA');
+          div.innerHTML = `
+            <div class="task-info">
+              <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+              <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
+                ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
+                ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
+              </div>
+              <strong>${task.title}</strong>
+              <small>Виконавець: ${task.worker || 'немає'}</small>
+              <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
+            </div>
+            <div class="task-controls">
+              <select id="status-${task.row}">
+                <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+                <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+                <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+                <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+              </select>
+              <button onclick="updateStatus(${task.row})">Оновити</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      }
+      applyFilter();
+    })
+    .catch(err => {
+      console.error("Помилка:", err);
+      document.getElementById('loader').innerText = "Помилка завантаження";
+    });
 }
 
 function updateStatus(row) {
