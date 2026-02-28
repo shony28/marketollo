@@ -117,6 +117,20 @@
   color: white !important;
   transition: all 0.2s ease;
 }
+
+.project-group { margin-bottom: 16px; }
+.project-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #e8eaf6; padding: 10px 16px; border-radius: 10px;
+  cursor: pointer; font-weight: bold; color: #2c3e50;
+  user-select: none; border-left: 4px solid #7986cb;
+  transition: background 0.2s;
+}
+.project-group-header:hover { background: #d1d5f0; }
+.project-group-header .group-meta { font-size: 0.8em; color: #666; font-weight: normal; }
+.project-group-body { overflow: hidden; transition: max-height 0.3s ease; }
+.project-group-body.collapsed { max-height: 0 !important; }
+.project-group-body .task-card:first-child { margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -176,6 +190,14 @@
         <span>Приховати виконані</span>
         <label class="switch">
           <input type="checkbox" id="hideDoneToggle" onchange="applyFilter()">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span>Групувати за проектом</span>
+        <label class="switch">
+          <input type="checkbox" id="groupByProjectToggle" onchange="saveGroupSettings(); loadTasks();">
           <span class="slider"></span>
         </label>
       </div>
@@ -260,6 +282,8 @@ function checkSavedSession() {
     if (savedFilter !== null) document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
     const savedSort = localStorage.getItem('taskSortMode');
     if (savedSort !== null) document.getElementById('sortOrder').value = savedSort;
+    const savedGroup = localStorage.getItem('groupByProject');
+    if (savedGroup !== null) document.getElementById('groupByProjectToggle').checked = (savedGroup === 'true');
     
     if (savedEmail && savedName) {
         currentUserEmail = savedEmail;
@@ -294,7 +318,24 @@ function checkSavedSession() {
       localStorage.setItem('taskSortMode', document.getElementById('sortOrder').value);
     }
 
-    function loadTasks() {
+    function saveGroupSettings() {
+  localStorage.setItem('groupByProject', document.getElementById('groupByProjectToggle').checked);
+}
+
+function toggleProjectGroup(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.group-arrow');
+  const isCollapsed = body.classList.toggle('collapsed');
+  arrow.textContent = isCollapsed ? '▶' : '▼';
+
+  // Зберігаємо стан кожної групи
+  const project = header.dataset.project;
+  const collapsed = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+  collapsed[project] = isCollapsed;
+  localStorage.setItem('collapsedGroups', JSON.stringify(collapsed));
+}
+
+function loadTasks() {
   if (!currentUserEmail) return;
 
   if (!activeDept) {
@@ -312,13 +353,10 @@ function checkSavedSession() {
       list.innerHTML = '';
 
       let tasks = rows.map(row => {
-        // date приходить як "YYYY-MM-DD" або порожній рядок
         let rawDate = null;
         if (row.date) {
-          // new Date("YYYY-MM-DD") трактує як UTC, додаємо T00:00 щоб уникнути зсуву
           rawDate = new Date(row.date + 'T00:00:00');
         }
-
         return {
           row:          row.row,
           title:        row.title,
@@ -345,44 +383,98 @@ function checkSavedSession() {
 
       if (tasks.length === 0) {
         list.innerHTML = '<p style="text-align: center; color: #999;">У вас поки немає завдань</p>';
+        return;
+      }
+
+      const groupByProject = document.getElementById('groupByProjectToggle').checked;
+      const collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+
+      if (!groupByProject) {
+        // Звичайний режим без групування
+        tasks.forEach(task => list.appendChild(createTaskCard(task)));
       } else {
+        // Групування за project
+        const groups = {};
+        const groupOrder = [];
         tasks.forEach(task => {
-          const div = document.createElement('div');
-          div.className = 'task-card';
-          div.setAttribute('data-status', task.status);
-          const dateString = task.priorityDate.getFullYear() === 2099
-            ? 'не вказано'
-            : task.priorityDate.toLocaleDateString('uk-UA');
-          div.innerHTML = `
-            <div class="task-info">
-              <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
-              <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
-                ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
-                ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
-              </div>
-              <strong>${task.title}</strong>
-              <small>Виконавець: ${task.worker || 'немає'}</small>
-              <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
-            </div>
-            <div class="task-controls">
-              <select id="status-${task.row}">
-                <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
-                <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
-              </select>
-              <button onclick="updateStatus(${task.row})">Оновити</button>
-            </div>
+          const key = task.project || '— Без проекту —';
+          if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+          groups[key].push(task);
+        });
+
+        groupOrder.forEach(projectName => {
+          const groupTasks = groups[projectName];
+          const isCollapsed = !!collapsedGroups[projectName];
+
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'project-group';
+
+          // Рахуємо статуси для підпису в заголовку
+          const inProgress = groupTasks.filter(t => t.status === 'В процесі').length;
+          const done = groupTasks.filter(t => t.status === 'Виконано').length;
+          const metaParts = [];
+          if (inProgress) metaParts.push(`🟡 ${inProgress}`);
+          if (done) metaParts.push(`✅ ${done}`);
+          metaParts.push(`всього: ${groupTasks.length}`);
+
+          const header = document.createElement('div');
+          header.className = 'project-group-header';
+          header.dataset.project = projectName;
+          header.onclick = function() { toggleProjectGroup(this); };
+          header.innerHTML = `
+            <span><span class="group-arrow">${isCollapsed ? '▶' : '▼'}</span> 📁 ${projectName}</span>
+            <span class="group-meta">${metaParts.join(' · ')}</span>
           `;
-          list.appendChild(div);
+
+          const body = document.createElement('div');
+          body.className = 'project-group-body' + (isCollapsed ? ' collapsed' : '');
+          // Для анімації потрібна реальна висота — встановлюємо після рендеру
+          body.style.maxHeight = isCollapsed ? '0' : '9999px';
+
+          groupTasks.forEach(task => body.appendChild(createTaskCard(task)));
+          groupDiv.appendChild(header);
+          groupDiv.appendChild(body);
+          list.appendChild(groupDiv);
         });
       }
+
       applyFilter();
     })
     .catch(err => {
       console.error("Помилка:", err);
       document.getElementById('loader').innerText = "Помилка завантаження";
     });
+}
+
+function createTaskCard(task) {
+  const div = document.createElement('div');
+  div.className = 'task-card';
+  div.setAttribute('data-status', task.status);
+  const dateString = task.priorityDate.getFullYear() === 2099
+    ? 'не вказано'
+    : task.priorityDate.toLocaleDateString('uk-UA');
+  div.innerHTML = `
+    <div class="task-info">
+      <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+      <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
+        ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
+        ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
+      </div>
+      <strong>${task.title}</strong>
+      <small>Виконавець: ${task.worker || 'немає'}</small>
+      <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
+    </div>
+    <div class="task-controls">
+      <select id="status-${task.row}">
+        <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
+        <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
+        <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+        <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+      </select>
+      <button onclick="updateStatus(${task.row})">Оновити</button>
+    </div>
+  `;
+  return div;
 }
 
 function updateStatus(row) {
