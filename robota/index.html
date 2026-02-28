@@ -247,6 +247,7 @@ function logout() {
     if (refreshInterval) clearInterval(refreshInterval); // Зупиняємо автооновлення
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userPicture');
     document.getElementById("loginContainer").style.display = "flex";
     document.getElementById("appContainer").style.display = "none";
     document.getElementById("taskList").innerHTML = "";
@@ -262,12 +263,16 @@ function checkSavedSession() {
     
     if (savedEmail && savedName) {
         currentUserEmail = savedEmail;
+        const savedPicture = localStorage.getItem('userPicture') || '';
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
         document.getElementById("userInfo").innerHTML = `
-            <strong>Привіт, ${savedName}!</strong><br>
-            <small>${savedEmail}</small><br>
-            <button onclick="logout()">Вийти</button>
+            ${savedPicture ? `<img src="${savedPicture}" class="user-avatar" alt="avatar">` : ''}
+            <div class="user-details">
+              <strong>${savedName}</strong>
+              <small>${savedEmail}</small>
+            </div>
+            <button class="user-logout" onclick="logout()">Вийти</button>
         `;
         loadTasks();
         startAutoRefresh(); // Запускаємо автооновлення
