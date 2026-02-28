@@ -525,48 +525,33 @@ function submitNewTask() {
 
 // функція робить окремий запит до аркуша users, шукає там поточного користувача та перевіряє колонку E.
 function checkOtherDepartments(email) {
-    const mainSsId = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    const usersUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=users`;
-    const deptsUrl = `https://docs.google.com/spreadsheets/d/${mainSsId}/gviz/tq?tqx=out:json&sheet=Departments`;
+  Promise.all([
+    fetch(API_URL + "?action=getUsers").then(r => r.json()),
+    fetch(API_URL + "?action=getDepartments").then(r => r.json())
+  ])
+  .then(([usersData, deptsData]) => {
+    // Будуємо словник конфігів з листа Departments
+    deptConfigs = {};
+    deptsData.forEach(d => {
+      deptConfigs[d.name] = { ssId: d.ssId, API_URL: d.apiUrl };
+    });
 
-    Promise.all([
-        fetch(usersUrl).then(r => r.text()),
-        fetch(deptsUrl).then(r => r.text())
-    ])
-    .then(([usersRaw, deptsRaw]) => {
-        const usersJson = JSON.parse(usersRaw.substring(47, usersRaw.length - 2));
-        const deptsJson = JSON.parse(deptsRaw.substring(47, deptsRaw.length - 2));
+    // Шукаємо поточного користувача
+    const userRow = usersData.rows.find(r => r.email === email);
+    if (!userRow) return;
 
-        // Будуємо словник конфігів: A=назва, B=ssId, C=API_URL
-        deptConfigs = {};
-        deptsJson.table.rows.forEach(r => {
-            if (r.c[0] && r.c[1] && r.c[2]) {
-                const name   = r.c[0].v;
-                const ssId   = r.c[1].v;
-                const apiUrl = r.c[2].v;
-                if (name && ssId && apiUrl) {
-                    deptConfigs[name] = { ssId, API_URL: apiUrl };
-                }
-            }
-        });
+    // Перевіряємо кожен підрозділ
+    const alerts = [];
+    usersData.headers.forEach(deptName => {
+      const count = userRow[deptName] || 0;
+      if (count > 0 && deptConfigs[deptName]) {
+        alerts.push({ deptName, count });
+      }
+    });
 
-        const cols = usersJson.table.cols;
-        const userRow = usersJson.table.rows.find(r => r.c[0] && r.c[0].v === email);
-        if (!userRow) return;
-
-        const alerts = [];
-        for (let i = 4; i < cols.length; i++) {
-            const deptName = cols[i] ? cols[i].label : null;
-            if (!deptName) continue;
-            const count = userRow.c[i] ? (userRow.c[i].v || 0) : 0;
-            if (count > 0 && deptConfigs[deptName]) {
-                alerts.push({ deptName, count });
-            }
-        }
-
-        renderAllDeptAlerts(alerts);
-    })
-    .catch(err => console.error("Помилка перевірки підрозділів:", err));
+    renderAllDeptAlerts(alerts);
+  })
+  .catch(err => console.error("Помилка перевірки підрозділів:", err));
 }
 
 function renderAllDeptAlerts(alerts) {
