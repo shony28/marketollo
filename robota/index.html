@@ -400,7 +400,7 @@ function loadTasks() {
         const groups = {};
         const groupOrder = [];
         tasks.forEach(task => {
-          const key = task.project || '— Без проекту —';
+          const key = task.project || 'Без проекту';
           if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
           groups[key].push(task);
         });
