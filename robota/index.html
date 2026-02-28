@@ -134,6 +134,7 @@
 
   <div id="appContainer">
     <div id="userInfo"></div>
+    <div id="deptAlerts"></div>
     <div class="header-actions">
       <h2>📋 Мої завдання</h2>
       <button onclick="toggleCreateForm(true)" style="background: #2ecc71;">+ Створити</button>
@@ -611,17 +612,16 @@ function checkOtherDepartments(email) {
   .catch(err => console.error("Помилка перевірки підрозділів:", err));
 }
 
+
 function renderAllDeptAlerts(alerts) {
-    // Видаляємо старі алерти
     document.querySelectorAll('.dept-alert').forEach(el => el.remove());
 
     if (activeDept) {
-        // Показуємо кнопку "Повернутися"
         renderActiveDeptAlert();
         return;
     }
 
-    const infoDiv = document.getElementById("userInfo");
+    const alertsDiv = document.getElementById("deptAlerts"); 
     alerts.forEach(({ deptName, count }) => {
         const alertDiv = document.createElement("div");
         alertDiv.className = "dept-alert";
@@ -630,12 +630,12 @@ function renderAllDeptAlerts(alerts) {
             <strong>⚠️ Увага:</strong> Для вас є завдання в підрозділі <b>${deptName}</b> (${count})
             <button onclick="switchDepartment('${deptName}')" style="margin-left:10px; padding:4px 8px; background:#f39c12; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Завантажити</button>
         `;
-        infoDiv.appendChild(alertDiv);
+        alertsDiv.appendChild(alertDiv); 
     });
 }
 
 function renderActiveDeptAlert() {
-    const infoDiv = document.getElementById("userInfo");
+    const alertsDiv = document.getElementById("deptAlerts"); // ← изменить
     const alertDiv = document.createElement("div");
     alertDiv.className = "dept-alert";
     alertDiv.style = "margin-top: 10px; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; color: #155724; font-size: 0.9em; text-align: center;";
@@ -643,7 +643,7 @@ function renderActiveDeptAlert() {
         <strong>📂 Підрозділ: ${activeDept}</strong>
         <button onclick="switchDepartment(null)" style="margin-left:10px; padding:4px 8px; background:#34495e; font-size:12px; border:none; border-radius:4px; color:white; cursor:pointer;">Повернутися назад</button>
     `;
-    infoDiv.appendChild(alertDiv);
+    alertsDiv.appendChild(alertDiv); // ← изменить
 }
 
 function switchDepartment(deptName) {
