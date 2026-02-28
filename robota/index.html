@@ -166,22 +166,20 @@ function handleLogin(response) {
         currentUserEmail = user.email;
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('userName', user.name);
+        localStorage.setItem('userPicture', user.picture || ''); // ← ДОБАВИТЬ
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
         document.getElementById("userInfo").innerHTML = `
+          ${user.picture ? `<img src="${user.picture}" style="width:48px; height:48px; border-radius:50%; margin-bottom:8px;">` : ''}
           <strong>Привіт, ${user.name}!</strong><br>
           <small>${user.email}</small><br>
           <button onclick="logout()">Вийти</button>
         `;
         loadTasks();
-        startAutoRefresh(); // Запускаємо автооновлення
+        startAutoRefresh();
       } else {
         alert("Помилка авторизації: " + user.message);
       }
-    })
-    .catch(err => {
-      console.error("Помилка мережі:", err);
-      alert("Не вдалося підключитися до сервера");
     });
 }
 function logout() {
