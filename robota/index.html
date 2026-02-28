@@ -424,9 +424,24 @@ function loadTasks() {
           header.className = 'project-group-header';
           header.dataset.project = projectName;
           header.onclick = function() { toggleProjectGroup(this); };
+          const donePercent = groupTasks.length > 0 ? Math.round((done / groupTasks.length) * 100) : 0;
+          const otherPercent = 100 - donePercent;
+
           header.innerHTML = `
             <span><span class="group-arrow">${isCollapsed ? '▶' : '▼'}</span> 📁 ${projectName}</span>
-            <span class="group-meta">${metaParts.join(' · ')}</span>
+            <span style="display:flex; align-items:center; gap:10px;">
+              <span class="group-meta">${metaParts.join(' · ')}</span>
+              <span style="display:flex; align-items:center; gap:5px; font-size:0.8em; color:#666;">
+                <span style="
+                  display:inline-flex; width:80px; height:8px; border-radius:4px; overflow:hidden;
+                  background:#e0e0e0; flex-shrink:0;
+                ">
+                  <span style="width:${donePercent}%; background:#2ecc71; transition:width 0.3s;"></span>
+                  <span style="width:${otherPercent}%; background:#f39c12; transition:width 0.3s;"></span>
+                </span>
+                ${donePercent}%
+              </span>
+            </span>
           `;
 
           const body = document.createElement('div');
