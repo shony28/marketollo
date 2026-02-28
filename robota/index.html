@@ -469,8 +469,9 @@ function createTaskCard(task) {
       <select id="status-${task.row}">
         <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
         <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-        <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
         <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
+        <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
+        
       </select>
       <button onclick="updateStatus(${task.row})">Оновити</button>
     </div>
