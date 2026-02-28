@@ -417,8 +417,8 @@ function loadTasks() {
           const done = groupTasks.filter(t => t.status === 'Виконано').length;
           const metaParts = [];
           if (inProgress) metaParts.push(`🟡 ${inProgress}`);
-          if (done) metaParts.push(`✅ ${done}`);
-          metaParts.push(`всього: ${groupTasks.length}`);
+          if (done) metaParts.push(`${done}`);
+          metaParts.push(`з ${groupTasks.length}`);
 
           const header = document.createElement('div');
           header.className = 'project-group-header';
