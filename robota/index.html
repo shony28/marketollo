@@ -60,14 +60,6 @@
       transform: scale(1.01); /* Легкое увеличение для акцента */
       transition: all 0.3s ease;
     }
-    .user-avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      margin-bottom: 10px;
-      border: 2px solid #2ecc71;
-      object-fit: cover;
-    }
   </style>
 </head>
 <body>
@@ -174,20 +166,15 @@ function handleLogin(response) {
         currentUserEmail = user.email;
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('userName', user.name);
-        localStorage.setItem('userPicture', user.picture); // Зберігаємо фото
-        
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
-        
         document.getElementById("userInfo").innerHTML = `
-          ${user.picture ? `<img src="${user.picture}" class="user-avatar" alt="Avatar">` : ''}
-          <br><strong>Привіт, ${user.name}!</strong><br>
+          <strong>Привіт, ${user.name}!</strong><br>
           <small>${user.email}</small><br>
           <button onclick="logout()">Вийти</button>
         `;
-        
         loadTasks();
-        startAutoRefresh(); 
+        startAutoRefresh(); // Запускаємо автооновлення
       } else {
         alert("Помилка авторизації: " + user.message);
       }
@@ -199,10 +186,9 @@ function handleLogin(response) {
 }
 function logout() {
     currentUserEmail = null;
-    if (refreshInterval) clearInterval(refreshInterval); 
+    if (refreshInterval) clearInterval(refreshInterval); // Зупиняємо автооновлення
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
-    localStorage.removeItem('userPicture'); // Видаляємо фото
     document.getElementById("loginContainer").style.display = "flex";
     document.getElementById("appContainer").style.display = "none";
     document.getElementById("taskList").innerHTML = "";
@@ -211,9 +197,7 @@ function logout() {
 function checkSavedSession() {
     const savedEmail = localStorage.getItem('userEmail');
     const savedName = localStorage.getItem('userName');
-    const savedPicture = localStorage.getItem('userPicture'); // Отримуємо фото
     const savedFilter = localStorage.getItem('hideDoneSettings');
-    
     if (savedFilter !== null) document.getElementById('hideDoneToggle').checked = (savedFilter === 'true');
     const savedSort = localStorage.getItem('taskSortMode');
     if (savedSort !== null) document.getElementById('sortOrder').value = savedSort;
@@ -222,16 +206,13 @@ function checkSavedSession() {
         currentUserEmail = savedEmail;
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
-        
         document.getElementById("userInfo").innerHTML = `
-            ${savedPicture ? `<img src="${savedPicture}" class="user-avatar" alt="Avatar">` : ''}
-            <br><strong>Привіт, ${savedName}!</strong><br>
+            <strong>Привіт, ${savedName}!</strong><br>
             <small>${savedEmail}</small><br>
             <button onclick="logout()">Вийти</button>
         `;
-        
         loadTasks();
-        startAutoRefresh(); 
+        startAutoRefresh(); // Запускаємо автооновлення
     }
 }
 
@@ -324,9 +305,8 @@ function checkSavedSession() {
               <select id="status-${task.row}">
                 <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
                 <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
-                <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
                 <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-                
+                <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
               </select>
               <button onclick="updateStatus(${task.row})">Оновити</button>
             </div>
