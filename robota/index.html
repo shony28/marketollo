@@ -328,6 +328,8 @@ function toggleProjectGroup(header) {
   const isCollapsed = body.classList.toggle('collapsed');
   arrow.textContent = isCollapsed ? '▶' : '▼';
 
+  body.style.maxHeight = isCollapsed ? '0' : '9999px';
+
   // Зберігаємо стан кожної групи
   const project = header.dataset.project;
   const collapsed = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
