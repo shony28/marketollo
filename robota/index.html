@@ -258,8 +258,9 @@ function handleLogin(response) {
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
         document.getElementById("userInfo").innerHTML = `
-          ${user.picture ? `<img src="${user.picture}" class="user-avatar" alt="avatar">` : ''}
           <img src="https://klen.ua/klen-logo-89x100.jpg" class="company-logo" alt="logo">
+          ${user.picture ? `<img src="${user.picture}" class="user-avatar" alt="avatar">` : ''}
+          
           <div class="user-details">
             <strong>${user.name}</strong>
             <small>${user.email}</small>
@@ -300,8 +301,9 @@ function checkSavedSession() {
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
         document.getElementById("userInfo").innerHTML = `
+          <img src="https://klen.ua/klen-logo-89x100.jpg" class="company-logo" alt="logo">
           ${savedPicture ? `<img src="${savedPicture}" class="user-avatar" alt="avatar">` : ''}
-          <img src="https://klen.ua/klen-logo-89x100.jpg" class="company-logo" alt="logo">   <!-- ← ДОДАТИ -->
+          
           <div class="user-details">
               <strong>${savedName}</strong>
               <small>${savedEmail}</small>
