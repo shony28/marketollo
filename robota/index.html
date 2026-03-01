@@ -131,6 +131,14 @@
 .project-group-body { overflow: hidden; transition: max-height 0.3s ease; }
 .project-group-body.collapsed { max-height: 0 !important; }
 .project-group-body .task-card:first-child { margin-top: 8px; }
+
+.company-logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-left: auto; /* притиснути до правого краю, або прибрати якщо не потрібно */
+}
   </style>
 </head>
 <body>
@@ -251,6 +259,7 @@ function handleLogin(response) {
         document.getElementById("appContainer").style.display = "block";
         document.getElementById("userInfo").innerHTML = `
           ${user.picture ? `<img src="${user.picture}" class="user-avatar" alt="avatar">` : ''}
+          <img src="https://klen.ua/klen-logo-89x100.jpg" class="company-logo" alt="logo">
           <div class="user-details">
             <strong>${user.name}</strong>
             <small>${user.email}</small>
@@ -291,8 +300,9 @@ function checkSavedSession() {
         document.getElementById("loginContainer").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
         document.getElementById("userInfo").innerHTML = `
-            ${savedPicture ? `<img src="${savedPicture}" class="user-avatar" alt="avatar">` : ''}
-            <div class="user-details">
+          ${savedPicture ? `<img src="${savedPicture}" class="user-avatar" alt="avatar">` : ''}
+          <img src="https://klen.ua/klen-logo-89x100.jpg" class="company-logo" alt="logo">   <!-- ← ДОДАТИ -->
+          <div class="user-details">
               <strong>${savedName}</strong>
               <small>${savedEmail}</small>
             </div>
