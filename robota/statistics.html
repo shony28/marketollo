@@ -99,14 +99,7 @@
   </div>
 
   <script>
-    const COL_TYPE       = 0;
-    const COL_PROJECT    = 2;
-    const COL_KONTRAHENT = 3;
-    const COL_WORKER     = 5;
-    const COL_MINUTES    = 13;
-
-    const SPREADSHEET_ID = '1v6ZjZqiES45fG35yB3Z17chEoK0df5QSWfMJxOu096A';
-    const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
+    const GAS_URL = 'https://script.google.com/macros/s/ВАШ_DEPLOYMENT_ID/exec';
 
     let globalStats = null; // Зберігаємо дані для перемальовування
 
@@ -119,12 +112,9 @@
     });
 
     function fetchData() {
-      fetch(GVIZ_URL)
-        .then(res => res.text())
-        .then(text => {
-          const json = JSON.parse(text.substring(47, text.length - 2));
-          processData(json.table.rows);
-        });
+      fetch(GAS_URL + '?action=stats')
+        .then(res => res.json())
+        .then(data => processData(data.rows));
     }
 
     function processData(rows) {
@@ -136,19 +126,18 @@
       };
 
       rows.forEach(row => {
-        const c = row.c;
-        const mins = (c[COL_MINUTES] && c[COL_MINUTES].v) ? Number(c[COL_MINUTES].v) : 0;
+        const mins = row.minutes;
         if (mins <= 0) return;
 
-        const type = c[COL_TYPE]?.v || "Інше";
-        const worker = c[COL_WORKER]?.v || "Невідомо";
-        const project = c[COL_PROJECT]?.v || "Без назви";
-        const kontr = c[COL_KONTRAHENT]?.v || "Не вказано";
+        const type      = row.type      || "Інше";
+        const worker    = row.worker    || "Невідомо";
+        const project   = row.project   || "Без назви";
+        const kontr     = row.kontrahent || "Не вказано";
 
-        stats.types[type] = (stats.types[type] || 0) + mins;
-        stats.workers[worker] = (stats.workers[worker] || 0) + mins;
-        stats.projects[project] = (stats.projects[project] || 0) + mins;
-        stats.kontrahents[kontr] = (stats.kontrahents[kontr] || 0) + mins;
+        stats.types[type]           = (stats.types[type]           || 0) + mins;
+        stats.workers[worker]       = (stats.workers[worker]       || 0) + mins;
+        stats.projects[project]     = (stats.projects[project]     || 0) + mins;
+        stats.kontrahents[kontr]    = (stats.kontrahents[kontr]    || 0) + mins;
       });
 
       globalStats = stats;
@@ -156,21 +145,9 @@
     }
 
     function drawCharts(stats) {
-      // Налаштування для кругових діаграм (легенда праворуч)
-      const pieOptions = {
-        pieHole: 0.4,
-        chartArea: { width: '70%', height: '80%', left: '5%' }, // 'left' дає відступ від краю
-        legend: { 
-          position: 'right', 
-          alignment: 'center',
-          textStyle: { fontSize: 12 } 
-        }
-      };
-
-      // Налаштування для стовпчикових діаграм (легенда знизу або відсутня)
-      const barOptions = {
-        chartArea: { width: '80%', height: '70%' },
-        legend: { position: 'none' } 
+      const commonOptions = {
+        chartArea: {width: '85%', height: '75%'},
+        legend: { position: 'bottom', textStyle: { fontSize: 12 } }
       };
 
       // 1. Контрагенти
@@ -178,14 +155,14 @@
         ['Контрагент', 'Хвилини'], ...Object.entries(stats.kontrahents)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_kontrahent'))
-          .draw(dataKontr, pieOptions);
+          .draw(dataKontr, { ...commonOptions, pieHole: 0.4 });
 
       // 2. Типи робіт
       const dataPie = google.visualization.arrayToDataTable([
         ['Тип', 'Хвилини'], ...Object.entries(stats.types)
       ]);
       new google.visualization.PieChart(document.getElementById('chart_pie_types'))
-          .draw(dataPie, pieOptions);
+          .draw(dataPie, { ...commonOptions, pieHole: 0.4 });
 
       // 3. Виконавці
       const dataWorkers = google.visualization.arrayToDataTable([
@@ -193,14 +170,14 @@
         ...Object.entries(stats.workers).map(([k, v]) => [k, v, '#3498db'])
       ]);
       new google.visualization.ColumnChart(document.getElementById('chart_bar_workers'))
-          .draw(dataWorkers, barOptions);
+          .draw(dataWorkers, { ...commonOptions, legend: 'none' });
 
       // 4. Проєкти
       const dataProj = google.visualization.arrayToDataTable([
         ['Проєкт', 'Хвилини'], ...Object.entries(stats.projects)
       ]);
       new google.visualization.BarChart(document.getElementById('chart_bar_projects'))
-          .draw(dataProj, { ...barOptions, colors: ['#2ecc71'] });
+          .draw(dataProj, { ...commonOptions, legend: 'none', colors: ['#2ecc71'] });
     }
   </script>
 </body>
