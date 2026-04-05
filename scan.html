@@ -112,6 +112,7 @@
         const onSuccess = (decodedText) => {
             resultDiv.innerText = `✅ Знайдено: ${decodedText}`;
             resultDiv.style.color = "green";
+            stopScanner();
         };
 
         const onError = () => {};
