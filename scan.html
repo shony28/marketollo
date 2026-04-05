@@ -109,10 +109,28 @@
             }
         };
 
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playBeep() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(1800, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.6, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.15);
+        }
+
         const onSuccess = (decodedText) => {
+            playBeep();
             resultDiv.innerText = `✅ Знайдено: ${decodedText}`;
             resultDiv.style.color = "green";
-            stopScanner();
         };
 
         const onError = () => {};
