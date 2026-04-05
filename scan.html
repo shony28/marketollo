@@ -3,127 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High-Performance QR Scanner</title>
+    <title>QR Scanner з ліхтариком</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f4f4f9;
+            background-color: #f0f2f5;
             padding: 20px;
+            margin: 0;
         }
+
+        h2 { color: #333; }
 
         #reader {
             width: 100%;
-            max-width: 600px;
-            background: white;
-            border-radius: 12px;
+            max-width: 500px;
+            background: #000;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .controls {
             margin-top: 20px;
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
+            width: 100%;
+            max-width: 500px;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px;
             border: none;
-            border-radius: 6px;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
+            border-radius: 8px;
             font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
         }
 
-        button:disabled { background-color: #ccc; }
+        #start-btn { background-color: #28a745; color: white; grid-column: span 2; }
+        #stop-btn { background-color: #dc3545; color: white; grid-column: span 2; }
+        
+        /* Кнопки ліхтарика */
+        .torch-btn { background-color: #ffc107; color: #333; }
+        .torch-btn:disabled { background-color: #ccc; color: #777; cursor: not-allowed; }
 
         #result {
             margin-top: 20px;
             padding: 15px;
-            background: #e9ecef;
-            border-radius: 8px;
-            word-break: break-all;
-            max-width: 600px;
+            background: white;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
             text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
 
-    <h2>QR/Bar-code Scanner</h2>
+    <h2>QR Сканер + Ліхтарик</h2>
     
     <div id="reader"></div>
 
     <div class="controls">
-        <button id="start-btn">Запустити сканер</button>
-        <button id="stop-btn" disabled>Зупинити</button>
+        <button id="start-btn">Запустити камеру</button>
+        <button id="stop-btn" style="display: none;">Зупинити</button>
+        
+        <button id="torch-on-btn" class="torch-btn" disabled>🔦 Увімкнути світло</button>
+        <button id="torch-off-btn" class="torch-btn" disabled>🚫 Вимкнути світло</button>
     </div>
 
-    <div id="result">Результат з'явиться тут</div>
+    <div id="result">Очікування запуску...</div>
 
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
+        const torchOnBtn = document.getElementById('torch-on-btn');
+        const torchOffBtn = document.getElementById('torch-off-btn');
         const resultDiv = document.getElementById('result');
 
-        const qrConfig = {
-            fps: 30, // Високий FPS для плавності (апаратне навантаження)
+        const config = {
+            fps: 30,
             qrbox: { width: 250, height: 250 },
-            // Налаштування для максимальної продуктивності
             videoConstraints: {
-                facingMode: "environment",
-                // Запит на апаратне прискорення через роздільну здатність та частоту
-                frameRate: { ideal: 30, max: 60 }
+                facingMode: "environment"
             }
         };
 
-        const onSuccess = (decodedText, decodedResult) => {
-            resultDiv.innerText = `Знайдено: ${decodedText}`;
-            resultDiv.style.color = "green";
-            // Можна зупинити після успіху, якщо потрібно
-            // stopScanner();
-        };
-
-        const onError = (err) => {
-            // Ігноруємо помилки "код не знайдено" для чистоти консолі
-        };
+        // Функція керування ліхтариком
+        async function setTorch(state) {
+            try {
+                const track = html5QrCode.getRunningTrack();
+                if (track && track.getCapabilities().torch) {
+                    await track.applyConstraints({
+                        advanced: [{ torch: state }]
+                    });
+                }
+            } catch (err) {
+                console.error("Помилка ліхтарика:", err);
+            }
+        }
 
         async function startScanner() {
             try {
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                resultDiv.innerText = "Камера запускається...";
-
+                resultDiv.innerText = "Доступ до камери...";
+                
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    qrConfig, 
-                    onSuccess, 
-                    onError
+                    config,
+                    (decodedText) => {
+                        resultDiv.innerHTML = `<strong>Результат:</strong> ${decodedText}`;
+                        resultDiv.style.color = "#28a745";
+                    },
+                    (errorMessage) => { /* ігноруємо помилки пошуку */ }
                 );
+
+                // Після успішного старту міняємо кнопки
+                startBtn.style.display = "none";
+                stopBtn.style.display = "block";
+                resultDiv.innerText = "Сканер готовий";
+
+                // Перевіряємо чи є ліхтарик
+                const track = html5QrCode.getRunningTrack();
+                const capabilities = track.getCapabilities();
                 
-                resultDiv.innerText = "Сканер активний. Наведіть на код.";
+                if (capabilities.torch) {
+                    torchOnBtn.disabled = false;
+                    torchOffBtn.disabled = false;
+                } else {
+                    resultDiv.innerText += " (Ліхтарик не підтримується)";
+                }
+
             } catch (err) {
-                resultDiv.innerText = `Помилка: ${err}`;
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
+                resultDiv.innerText = "Помилка: " + err;
+                console.error(err);
             }
         }
 
         async function stopScanner() {
             await html5QrCode.stop();
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            resultDiv.innerText = "Сканер зупинено.";
+            startBtn.style.display = "block";
+            stopBtn.style.display = "none";
+            torchOnBtn.disabled = true;
+            torchOffBtn.disabled = true;
+            resultDiv.innerText = "Сканер зупинено";
         }
 
+        // Прив'язка подій
         startBtn.addEventListener('click', startScanner);
         stopBtn.addEventListener('click', stopScanner);
+        torchOnBtn.addEventListener('click', () => setTorch(true));
+        torchOffBtn.addEventListener('click', () => setTorch(false));
+
     </script>
 </body>
 </html>
