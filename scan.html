@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High-Performance QR Scanner</title>
+    <title>QR Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
@@ -13,17 +14,24 @@
             align-items: center;
             background-color: #f4f4f9;
             padding: 20px;
+            min-height: 100vh;
         }
-
-        #reader {
+        h2 { margin-bottom: 20px; }
+        #scanner-screen, #result-screen {
             width: 100%;
             max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #result-screen { display: none; }
+        #reader {
+            width: 100%;
             background: white;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
-
         .controls {
             margin-top: 20px;
             display: flex;
@@ -31,7 +39,6 @@
             flex-wrap: wrap;
             justify-content: center;
         }
-
         button {
             padding: 10px 20px;
             border: none;
@@ -42,213 +49,215 @@
             font-weight: bold;
             font-size: 15px;
         }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        #torch-btn {
-            background-color: #6c757d;
-            display: none; /* прихована поки сканер не запущено */
-        }
-
-        #torch-btn.active {
-            background-color: #ffc107;
-            color: #212529;
-        }
-
-        #torch-btn:disabled {
-            background-color: #ccc;
-        }
-
-        #result {
-            margin-top: 20px;
-            padding: 15px;
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #torch-btn { background-color: #6c757d; display: none; }
+        #torch-btn.active { background-color: #ffc107; color: #212529; }
+        #torch-btn:disabled { background-color: #ccc; }
+        #status {
+            margin-top: 16px;
+            padding: 12px 16px;
             background: #e9ecef;
             border-radius: 8px;
-            word-break: break-all;
-            max-width: 600px;
             width: 100%;
             text-align: center;
-            box-sizing: border-box;
+            font-size: 14px;
+            color: #555;
         }
+        #result-card {
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 36px 24px 28px;
+            text-align: center;
+        }
+        .res-icon { font-size: 56px; margin-bottom: 16px; }
+        .res-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+        .res-value {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1a1a1a;
+            word-break: break-all;
+            background: #f4f4f9;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+        .res-value a { color: #007bff; text-decoration: none; }
+        .res-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        #copy-btn { background-color: #28a745; }
+        #rescan-btn { background-color: #007bff; }
+        #copy-confirm { margin-top: 12px; font-size: 13px; color: #28a745; height: 18px; }
     </style>
 </head>
 <body>
 
-    <h2>QR/Bar-code Scanner</h2>
+<h2>QR/Bar-code Scanner</h2>
 
+<div id="scanner-screen">
     <div id="reader"></div>
-
     <div class="controls">
-        <button id="start-btn">▶ Запустити сканер</button>
-        <button id="torch-btn" disabled>🔦 Ліхтарик</button>
-        <button id="stop-btn" disabled>⏹ Зупинити</button>
+        <button id="start-btn">&#9654; Запустити сканер</button>
+        <button id="torch-btn" disabled>&#128294; Ліхтарик</button>
+        <button id="stop-btn" disabled>&#9209; Зупинити</button>
     </div>
+    <div id="status">Натисніть «Запустити сканер»</div>
+</div>
 
-    <div id="result">Результат з'явиться тут</div>
+<div id="result-screen">
+    <div id="result-card">
+        <div class="res-icon">&#9989;</div>
+        <div class="res-label">Відсканований код</div>
+        <div class="res-value" id="result-value">—</div>
+        <div class="res-actions">
+            <button id="copy-btn">&#128203; Копіювати</button>
+            <button id="rescan-btn">&#128260; Сканувати ще</button>
+        </div>
+        <div id="copy-confirm"></div>
+    </div>
+</div>
 
-    <script>
-        const html5QrCode = new Html5Qrcode("reader");
-        const startBtn  = document.getElementById('start-btn');
-        const stopBtn   = document.getElementById('stop-btn');
-        const torchBtn  = document.getElementById('torch-btn');
-        const resultDiv = document.getElementById('result');
+<script>
+    const html5QrCode  = new Html5Qrcode("reader");
+    const startBtn     = document.getElementById('start-btn');
+    const stopBtn      = document.getElementById('stop-btn');
+    const torchBtn     = document.getElementById('torch-btn');
+    const statusDiv    = document.getElementById('status');
+    const scannerScreen = document.getElementById('scanner-screen');
+    const resultScreen  = document.getElementById('result-screen');
+    const resultValue   = document.getElementById('result-value');
+    const copyBtn       = document.getElementById('copy-btn');
+    const rescanBtn     = document.getElementById('rescan-btn');
+    const copyConfirm   = document.getElementById('copy-confirm');
 
-        let torchOn = false;
-        let torchSupported = false;
-        let videoTrack = null;
+    let torchOn = false, torchSupported = false, videoTrack = null, scanning = false;
 
-        const qrConfig = {
-            fps: 30,
-            qrbox: { width: 250, height: 250 },
-            videoConstraints: {
-                facingMode: "environment",
-                frameRate: { ideal: 30, max: 60 }
-            }
-        };
+    const qrConfig = {
+        fps: 30,
+        qrbox: { width: 250, height: 250 },
+        videoConstraints: { facingMode: "environment", frameRate: { ideal: 30, max: 60 } }
+    };
 
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        function playBeep() {
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
+    function playBeep() {
+        const osc  = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.15);
+    }
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+    const onSuccess = (decodedText) => {
+        if (!scanning) return;
+        scanning = false;
+        playBeep();
+        stopScanner(decodedText);
+    };
 
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(1800, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.6, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-
-            oscillator.start(audioCtx.currentTime);
-            oscillator.stop(audioCtx.currentTime + 0.15);
-        }
-
-        const onSuccess = (decodedText) => {
-            playBeep();
-            resultDiv.innerText = `✅ Знайдено: ${decodedText}`;
-            resultDiv.style.color = "green";
-        };
-
-        const onError = () => {};
-
-        async function startScanner() {
-            try {
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                resultDiv.style.color = "";
-                resultDiv.innerText = "Камера запускається...";
-
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    qrConfig,
-                    onSuccess,
-                    onError
-                );
-
-                resultDiv.innerText = "Сканер активний. Наведіть на код.";
-
-                // Отримуємо відео-трек для керування ліхтариком
-                const stream = html5QrCode
-                    .getRunningTrackConstraints
-                    ? null
-                    : null;
-
-                // Доступ до внутрішнього відеоелемента
-                const videoElem = document.querySelector('#reader video');
-                if (videoElem && videoElem.srcObject) {
-                    const tracks = videoElem.srcObject.getVideoTracks();
-                    if (tracks.length > 0) {
-                        videoTrack = tracks[0];
-                        const capabilities = videoTrack.getCapabilities();
-                        if (capabilities.torch) {
-                            torchSupported = true;
-                            torchBtn.disabled = false;
-                            torchBtn.style.display = 'inline-block';
-                        } else {
-                            // Ліхтарик не підтримується пристроєм
-                            torchBtn.style.display = 'inline-block';
-                            torchBtn.disabled = true;
-                            torchBtn.title = 'Ліхтарик не підтримується цим пристроєм';
-                        }
-                    }
-                } else {
-                    // Затримка — дочекатись поки відео підключиться
-                    setTimeout(checkTorchSupport, 1000);
-                }
-
-            } catch (err) {
-                resultDiv.innerText = `❌ Помилка: ${err}`;
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-            }
-        }
-
-        function checkTorchSupport() {
-            const videoElem = document.querySelector('#reader video');
-            if (videoElem && videoElem.srcObject) {
-                const tracks = videoElem.srcObject.getVideoTracks();
-                if (tracks.length > 0) {
-                    videoTrack = tracks[0];
-                    const capabilities = videoTrack.getCapabilities();
-                    torchBtn.style.display = 'inline-block';
-                    if (capabilities.torch) {
-                        torchSupported = true;
-                        torchBtn.disabled = false;
-                    } else {
-                        torchBtn.disabled = true;
-                        torchBtn.title = 'Ліхтарик не підтримується цим пристроєм';
-                    }
-                }
-            }
-        }
-
-        async function toggleTorch() {
-            if (!torchSupported || !videoTrack) return;
-            try {
-                torchOn = !torchOn;
-                await videoTrack.applyConstraints({
-                    advanced: [{ torch: torchOn }]
-                });
-                if (torchOn) {
-                    torchBtn.textContent = '🔦 Ліхтарик ВКЛ';
-                    torchBtn.classList.add('active');
-                } else {
-                    torchBtn.textContent = '🔦 Ліхтарик';
-                    torchBtn.classList.remove('active');
-                }
-            } catch (err) {
-                resultDiv.innerText = `⚠️ Не вдалось керувати ліхтариком: ${err}`;
-            }
-        }
-
-        async function stopScanner() {
-            // Вимкнути ліхтарик перед зупинкою
-            if (torchOn && videoTrack) {
-                await videoTrack.applyConstraints({ advanced: [{ torch: false }] });
-            }
-            torchOn = false;
-            torchSupported = false;
-            videoTrack = null;
-
-            await html5QrCode.stop();
-
+    async function startScanner() {
+        try {
+            scanning = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            statusDiv.textContent = "Камера запускається...";
+            await html5QrCode.start({ facingMode: "environment" }, qrConfig, onSuccess, () => {});
+            statusDiv.textContent = "Сканер активний. Наведіть на код.";
+            setTimeout(checkTorchSupport, 800);
+        } catch (err) {
+            scanning = false;
+            statusDiv.textContent = "Помилка: " + err;
             startBtn.disabled = false;
             stopBtn.disabled = true;
-            torchBtn.disabled = true;
-            torchBtn.style.display = 'none';
-            torchBtn.textContent = '🔦 Ліхтарик';
-            torchBtn.classList.remove('active');
-            resultDiv.style.color = "";
-            resultDiv.innerText = "Сканер зупинено.";
         }
+    }
 
-        startBtn.addEventListener('click', startScanner);
-        stopBtn.addEventListener('click', stopScanner);
-        torchBtn.addEventListener('click', toggleTorch);
-    </script>
+    async function stopScanner(decodedText) {
+        if (torchOn && videoTrack) {
+            await videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+        }
+        torchOn = false; torchSupported = false; videoTrack = null;
+        try { await html5QrCode.stop(); } catch(e) {}
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        torchBtn.disabled = true;
+        torchBtn.style.display = 'none';
+        torchBtn.textContent = 'Ліхтарик';
+        torchBtn.classList.remove('active');
+
+        if (decodedText) {
+            showResult(decodedText);
+        } else {
+            scanning = false;
+            statusDiv.textContent = "Сканер зупинено.";
+        }
+    }
+
+    function showResult(text) {
+        let display = text;
+        try {
+            const url = new URL(text);
+            if (url.protocol === 'http:' || url.protocol === 'https:') {
+                display = '<a href="' + text + '" target="_blank" rel="noopener">' + text + '</a>';
+            }
+        } catch(e) {}
+        resultValue.innerHTML = display;
+        copyConfirm.textContent = '';
+        scannerScreen.style.display = 'none';
+        resultScreen.style.display  = 'flex';
+    }
+
+    copyBtn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(resultValue.textContent);
+            copyConfirm.textContent = 'Скопійовано!';
+            setTimeout(() => copyConfirm.textContent = '', 2000);
+        } catch(e) {
+            copyConfirm.textContent = 'Не вдалось скопіювати';
+        }
+    });
+
+    rescanBtn.addEventListener('click', () => {
+        resultScreen.style.display  = 'none';
+        scannerScreen.style.display = 'flex';
+        statusDiv.textContent = "Натисніть «Запустити сканер»";
+    });
+
+    function checkTorchSupport() {
+        const videoElem = document.querySelector('#reader video');
+        if (videoElem && videoElem.srcObject) {
+            const tracks = videoElem.srcObject.getVideoTracks();
+            if (tracks.length > 0) {
+                videoTrack = tracks[0];
+                const cap = videoTrack.getCapabilities();
+                torchBtn.style.display = 'inline-block';
+                if (cap.torch) { torchSupported = true; torchBtn.disabled = false; }
+                else { torchBtn.disabled = true; torchBtn.title = 'Ліхтарик не підтримується'; }
+            }
+        }
+    }
+
+    async function toggleTorch() {
+        if (!torchSupported || !videoTrack) return;
+        try {
+            torchOn = !torchOn;
+            await videoTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+            torchBtn.textContent = torchOn ? 'Ліхтарик ВКЛ' : 'Ліхтарик';
+            torchBtn.classList.toggle('active', torchOn);
+        } catch(err) {
+            statusDiv.textContent = "Не вдалось керувати ліхтариком";
+        }
+    }
+
+    startBtn.addEventListener('click', startScanner);
+    stopBtn.addEventListener('click', () => stopScanner(null));
+    torchBtn.addEventListener('click', toggleTorch);
+</script>
 </body>
 </html>
