@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Performance QR Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:disabled { background-color: #ccc; }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+            word-break: break-all;
+            max-width: 600px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>QR/Bar-code Scanner</h2>
+    
+    <div id="reader"></div>
+
+    <div class="controls">
+        <button id="start-btn">Запустити сканер</button>
+        <button id="stop-btn" disabled>Зупинити</button>
+    </div>
+
+    <div id="result">Результат з'явиться тут</div>
+
+    <script>
+        const html5QrCode = new Html5Qrcode("reader");
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const resultDiv = document.getElementById('result');
+
+        const qrConfig = {
+            fps: 30, // Високий FPS для плавності (апаратне навантаження)
+            qrbox: { width: 250, height: 250 },
+            // Налаштування для максимальної продуктивності
+            videoConstraints: {
+                facingMode: "environment",
+                // Запит на апаратне прискорення через роздільну здатність та частоту
+                frameRate: { ideal: 30, max: 60 }
+            }
+        };
+
+        const onSuccess = (decodedText, decodedResult) => {
+            resultDiv.innerText = `Знайдено: ${decodedText}`;
+            resultDiv.style.color = "green";
+            // Можна зупинити після успіху, якщо потрібно
+            // stopScanner();
+        };
+
+        const onError = (err) => {
+            // Ігноруємо помилки "код не знайдено" для чистоти консолі
+        };
+
+        async function startScanner() {
+            try {
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                resultDiv.innerText = "Камера запускається...";
+
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    qrConfig, 
+                    onSuccess, 
+                    onError
+                );
+                
+                resultDiv.innerText = "Сканер активний. Наведіть на код.";
+            } catch (err) {
+                resultDiv.innerText = `Помилка: ${err}`;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        async function stopScanner() {
+            await html5QrCode.stop();
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            resultDiv.innerText = "Сканер зупинено.";
+        }
+
+        startBtn.addEventListener('click', startScanner);
+        stopBtn.addEventListener('click', stopScanner);
+    </script>
+</body>
+</html>
