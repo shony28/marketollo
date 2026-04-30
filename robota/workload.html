@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Зайнятість працівників</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      background-color: #f0f2f5; 
+      margin: 0;
+      padding: 15px; 
+      color: #333;
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 20px; 
+      padding-top: 10px;
+    }
+
+    .back-link { 
+      text-decoration: none; 
+      color: #007bff; 
+      font-weight: bold; 
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .workload-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+      gap: 20px; 
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .worker-card { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+      display: flex;
+      flex-direction: column;
+      border-top: 5px solid #bdc3c7;
+    }
+
+    .worker-card.active-worker {
+      border-top-color: #2ecc71; /* Зелений, якщо є робота в процесі */
+    }
+
+    .worker-name {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #2c3e50;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+
+    .current-task {
+      background: #e8f5e9;
+      border-left: 4px solid #2ecc71;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+    }
+
+    .current-task-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: #27ae60;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .queue-title {
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: #7f8c8d;
+    }
+
+    .task-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .task-item {
+      padding: 8px 10px;
+      margin-bottom: 5px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #dfe6e9;
+      color: #636e72;
+    }
+
+    .status-new { background: #dff9fb; color: #0097e6; }
+    .status-pause { background: #fff4e0; color: #e67e22; }
+
+    .no-task { color: #bdc3c7; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <a href="index.html" class="back-link">← На головну</a>
+    <h1>Зайнятість команди</h1>
+  </div>
+
+  <div id="loader" style="text-align: center;">Завантаження даних...</div>
+  <div id="workloadGrid" class="workload-grid"></div>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzn_vrQG2HGHFTKUFoJU5uPFGT0PbLAD49ZpGZ9KOprA-vdPL2gm2itzOeRXdo_bBwV/exec';
+
+    document.addEventListener('DOMContentLoaded', fetchData);
+
+    function fetchData() {
+      fetch(GAS_URL + '?action=getWorkload')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('loader').style.display = 'none';
+          renderCards(data);
+        })
+        .catch(err => {
+          document.getElementById('loader').innerText = 'Помилка завантаження: ' + err;
+        });
+    }
+
+    function renderCards(workers) {
+      const grid = document.getElementById('workloadGrid');
+      grid.innerHTML = '';
+
+      workers.forEach(worker => {
+        const card = document.createElement('div');
+        card.className = 'worker-card' + (worker.currentTask ? ' active-worker' : '');
+        
+        let tasksHtml = '';
+        if (worker.queue && worker.queue.length > 0) {
+          worker.queue.forEach(t => {
+            const statusClass = t.status.toLowerCase() === 'нове' ? 'status-new' : (t.status.toLowerCase() === 'пауза' ? 'status-pause' : '');
+            tasksHtml += `
+              <div class="task-item">
+                <span>${t.name}</span>
+                <span class="status-badge ${statusClass}">${t.status}</span>
+              </div>`;
+          });
+        } else {
+          tasksHtml = '<div class="no-task">Черга порожня</div>';
+        }
+
+        card.innerHTML = `
+          <div class="worker-name">${worker.name}</div>
+          <div class="current-task">
+            <div class="current-task-label">Зараз у роботі:</div>
+            <div>${worker.currentTask || '<span class="no-task">Немає активних завдань</span>'}</div>
+          </div>
+          <div class="queue-title">В черзі:</div>
+          <div class="task-list">${tasksHtml}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
