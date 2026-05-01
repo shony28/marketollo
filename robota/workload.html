@@ -110,12 +110,49 @@
     .status-pause { background: #fff4e0; color: #e67e22; }
 
     .no-task { color: #bdc3c7; font-style: italic; }
+
+    .nav-menu {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .nav-button {
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background-color: #ffffff;
+      color: #2c3e50;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border: 1px solid #dcdde1;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .nav-button:hover {
+      background-color: #f8f9fa;
+      border-color: #007bff;
+      color: #007bff;
+    }
+
+    .nav-button.active {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <a href="index.html" class="back-link">← На головну</a>
+    <div class="nav-menu">
+      <a href="https://2828.pp.ua/robota/workload" class="nav-button active">Зайнятість</a>
+      <a href="https://2828.pp.ua/robota/project" class="nav-button">Проєкти</a>
+      <a href="https://2828.pp.ua/robota/statistics" class="nav-button">Статистика</a>
+    </div>
     <h1>Зайнятість команди</h1>
   </div>
 
