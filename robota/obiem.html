@@ -798,6 +798,39 @@
   }
 
   .config-save:active { background: var(--blue); color: #0d1117; }
+
+  .key-add {
+  background: var(--green);
+  border-color: var(--green);
+  color: #0d1117;
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.key-add:active {
+  background: #2ea043;
+  border-color: #2ea043;
+}
+
+.btn-journal-side {
+  align-self: flex-end;
+  width: 70px;
+  height: 68px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 26px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+
+.btn-journal-side:active {
+  background: var(--border);
+}
 </style>
 </head>
 <body>
@@ -857,35 +890,16 @@
 
   <!-- Input area -->
   <div class="input-area">
-    <div class="field-wrap">
-      <div class="field-label">Довжина (см)</div>
-      <input
-        type="text" readonly
-        id="field-length"
-        class="field-input"
-        placeholder="000"
-        onclick="setFocus('length')"
-      />
-      
+  <div class="field-wrap">
+    <div class="field-label">Довжина (см)</div>
+    <input type="text" readonly id="field-length" class="field-input" placeholder="0" />
     </div>
-    <div class="field-wrap">
-      <div class="field-label">Діаметр (см)</div>
-      <input
-        type="text" readonly
-        id="field-diameter"
-        class="field-input active"
-        placeholder="00"
-        onclick="setFocus('diameter')"
-      />
-      
+  <div class="field-wrap">
+    <div class="field-label">Діаметр (см)</div>
+    <input type="text" readonly id="field-diameter" class="field-input active" placeholder="0" />
     </div>
-    <button class="btn-add" onclick="addEntry()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
-      <span class="btn-add-label">ДОДАТИ</span>
-    </button>
-  </div>
+  <button class="btn-journal-side" onclick="openJournal()">📋</button>
+</div>
 
   <!-- Recent log -->
   <div class="recent-section">
@@ -900,23 +914,23 @@
 
 
 
-  <!-- Keyboard -->
-  <div class="keyboard">
-    <div class="keyboard-grid">
-      <div class="key" onclick="keyPress('7')">7</div>
-      <div class="key" onclick="keyPress('8')">8</div>
-      <div class="key" onclick="keyPress('9')">9</div>
-      <div class="key" onclick="keyPress('4')">4</div>
-      <div class="key" onclick="keyPress('5')">5</div>
-      <div class="key" onclick="keyPress('6')">6</div>
-      <div class="key" onclick="keyPress('1')">1</div>
-      <div class="key" onclick="keyPress('2')">2</div>
-      <div class="key" onclick="keyPress('3')">3</div>
-      <div class="key key-dot" onclick="keyPress('.')">·</div>
-      <div class="key" onclick="keyPress('0')">0</div>
-      <div class="key key-clear" onclick="keyPress('C')">⌫ CLR</div>
-    </div>
+<!-- Keyboard -->
+<div class="keyboard">
+  <div class="keyboard-grid">
+    <div class="key" onclick="keyPress('7')">7</div>
+    <div class="key" onclick="keyPress('8')">8</div>
+    <div class="key" onclick="keyPress('9')">9</div>
+    <div class="key" onclick="keyPress('4')">4</div>
+    <div class="key" onclick="keyPress('5')">5</div>
+    <div class="key" onclick="keyPress('6')">6</div>
+    <div class="key" onclick="keyPress('1')">1</div>
+    <div class="key" onclick="keyPress('2')">2</div>
+    <div class="key" onclick="keyPress('3')">3</div>
+    <div class="key key-clear" onclick="keyPress('C')">⌫ CLR</div>
+    <div class="key" onclick="keyPress('0')">0</div>
+    <div class="key key-add" onclick="addEntry()">+</div>
   </div>
+</div>
 
 </div>
 
