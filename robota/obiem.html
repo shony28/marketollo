@@ -860,7 +860,7 @@
   <!-- Input area -->
   <div class="input-area">
     <div class="field-wrap">
-      <div class="field-label">Довжина (м)</div>
+      <div class="field-label">Довжина (см)</div>
       <input
         type="text" readonly
         id="field-length"
@@ -868,7 +868,7 @@
         placeholder="0.00"
         onclick="setFocus('length')"
       />
-      <div class="field-unit">МЕТРИ</div>
+      <div class="field-unit">САНТИМЕТРИ</div>
     </div>
     <div class="field-wrap">
       <div class="field-label">Діаметр (см)</div>
@@ -1078,9 +1078,10 @@ function keyPress(key) {
 // ══════════════════════════════════════════
 //  ADD ENTRY
 // ══════════════════════════════════════════
-function calcVolume(lengthM, diamCm) {
+function calcVolume(lengthCm, diamCm) {
   const r = (diamCm / 100) / 2;
-  return Math.PI * r * r * lengthM;
+  const L = lengthCm / 100;
+  return Math.PI * r * r * L;
 }
 
 function addEntry() {
@@ -1105,7 +1106,6 @@ function addEntry() {
   state.entries.push(entry);
   saveState();
 
-  // Clear diameter, keep length
   dEl.value = '';
   dEl.classList.remove('has-value');
   setFocus('diameter');
