@@ -1045,8 +1045,12 @@ function showMainScreen() {
 // ══════════════════════════════════════════
 function setFocus(field) {
   activeField = field;
-  document.getElementById('field-length').classList.toggle('active', field === 'length');
-  document.getElementById('field-diameter').classList.toggle('active', field === 'diameter');
+  const lEl = document.getElementById('field-length');
+  const dEl = document.getElementById('field-diameter');
+  lEl.classList.toggle('active', field === 'length');
+  dEl.classList.toggle('active', field === 'diameter');
+  lEl.classList.toggle('has-value', lEl.value.length > 0);
+  dEl.classList.toggle('has-value', dEl.value.length > 0);
 }
 
 function keyPress(key) {
@@ -1358,7 +1362,11 @@ function showToast(msg, type = '') {
 
 // Prevent keyboard on touch for readonly inputs
 document.querySelectorAll('.field-input').forEach(el => {
-  el.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const field = el.id === 'field-length' ? 'length' : 'diameter';
+    setFocus(field);
+  }, { passive: false });
 });
 </script>
 </body>
