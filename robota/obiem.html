@@ -824,6 +824,13 @@
 
   <button class="btn-start" onclick="startSession()">ПОЧАТИ РОБОТУ</button>
 
+  <div class="config-section">
+    <button class="config-toggle" onclick="toggleConfig()">⚙ НАЛАШТУВАННЯ GAS URL</button>
+    <div class="config-body" id="config-body">
+      <input type="text" id="gas-url-input" class="config-input" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="config-save" onclick="saveGasUrl()">ЗБЕРЕГТИ URL</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════ MAIN SCREEN ══════ -->
@@ -951,7 +958,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyOioANbi0pYEqgfqXAsc2oDFBk5y_PPtf4wKjRy8quYfVuUMtJG-W-IdygrwHltUvW/exec';
 // ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
@@ -979,10 +985,14 @@ function loadState() {
 }
 
 function getGasUrl() {
-  return GAS_URL;
+  return localStorage.getItem('lisOblik_gasUrl') || '';
 }
 
-
+function saveGasUrl() {
+  const url = document.getElementById('gas-url-input').value.trim();
+  localStorage.setItem('lisOblik_gasUrl', url);
+  showToast('URL збережено ✓', 'success');
+}
 
 // ══════════════════════════════════════════
 //  INIT
@@ -1013,7 +1023,10 @@ function startSession() {
   showMainScreen();
 }
 
-
+function toggleConfig() {
+  const body = document.getElementById('config-body');
+  body.classList.toggle('open');
+}
 
 // ══════════════════════════════════════════
 //  SCREEN MANAGEMENT
