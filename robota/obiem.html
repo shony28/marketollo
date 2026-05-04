@@ -1102,12 +1102,25 @@ function keyPress(key) {
 // ══════════════════════════════════════════
 //  ADD ENTRY
 // ══════════════════════════════════════════
-function calcVolume(lengthCm, diamCm) {
-  const r = (diamCm / 100) / 2;
-  const L = lengthCm / 100;
-  return Math.PI * r * r * L;
+
+function calcVolumeHuber(lengthM, diamMidCm) {
+  // 1. Враховуємо товщину кори для дуба (корекція діаметра)
+  // Для дуба середнє зменшення діаметра "без кори" складає ~12% або 2-3 см
+  const barkCorrection = 0.88; 
+  const diamWithoutBarkM = (diamMidCm * barkCorrection) / 100;
+
+  // 2. Радіус без кори в метрах
+  const r = diamWithoutBarkM / 2;
+
+  // 3. Формула Губера: V = π × r² × L
+  const volume = Math.PI * Math.pow(r, 2) * lengthM;
+
+  // Округлення до 3 знаків (як у таблиці 12.7)
+  return parseFloat(volume.toFixed(3));
 }
 
+// Приклад для діаметра 24 см та довжини 3.0 м з файлу 1000021006.jpg
+console.log(calcVolumeHuber(3.0, 24)); // Результат буде близьким до 0.110 м³
 function addEntry() {
   const lEl = document.getElementById('field-length');
   const dEl = document.getElementById('field-diameter');
