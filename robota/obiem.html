@@ -41,7 +41,7 @@
 
   /* ══════════════════ REGISTRATION SCREEN ══════════════════ */
   #screen-reg {
-    display: none;
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -462,25 +462,25 @@
     flex-shrink: 0;
   }
 
-.btn-sync {
-  padding: 8px 10px;
-  background: var(--blue-dim);
-  border: 1px solid var(--blue);
-  border-radius: var(--radius);
-  font-family: 'Unbounded', sans-serif;
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--blue);
-  letter-spacing: 1px;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: background .2s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  align-self: center;
-}
+  .btn-sync {
+    width: 100%;
+    padding: 14px;
+    background: var(--blue-dim);
+    border: 1px solid var(--blue);
+    border-radius: var(--radius);
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
 
   .btn-sync:active { background: var(--blue); color: #0d1117; }
   .btn-sync.syncing { opacity: .6; pointer-events: none; }
@@ -798,63 +798,39 @@
   }
 
   .config-save:active { background: var(--blue); color: #0d1117; }
-
-  .key-add {
-  background: var(--green);
-  border-color: var(--green);
-  color: #0d1117;
-  font-size: 32px;
-  font-weight: 900;
-}
-
-.key-add:active {
-  background: #2ea043;
-  border-color: #2ea043;
-}
-
-.btn-journal-side {
-  align-self: flex-end;
-  width: 70px;
-  height: 68px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 26px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background .15s;
-}
-
-.btn-journal-side:active {
-  background: var(--border);
-}
 </style>
 </head>
 <body>
 
 <!-- ══════ REGISTRATION SCREEN ══════ -->
 <div id="screen-reg">
-  <div class="reg-logo">🌳 К'Лен</div>
+  <div class="reg-logo">🌲 ЛісОблік</div>
   <div class="reg-title">Обмір<br><span>деревини</span></div>
 
-  <div class="reg-label">Номер</div>
+  <div class="reg-label">Номер автомобіля</div>
   <div class="reg-input-wrap">
     <input
       type="text"
       id="car-input"
       class="reg-input"
-      placeholder="1234"
+      placeholder="АА 1234 ВВ"
       maxlength="12"
       autocomplete="off"
       autocorrect="off"
       spellcheck="false"
     />
   </div>
+  <div class="reg-hint">Введіть держ. номер авто.<br>Він стане назвою листа в таблиці.</div>
+
   <button class="btn-start" onclick="startSession()">ПОЧАТИ РОБОТУ</button>
 
+  <div class="config-section">
+    <button class="config-toggle" onclick="toggleConfig()">⚙ НАЛАШТУВАННЯ GAS URL</button>
+    <div class="config-body" id="config-body">
+      <input type="text" id="gas-url-input" class="config-input" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="config-save" onclick="saveGasUrl()">ЗБЕРЕГТИ URL</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════ MAIN SCREEN ══════ -->
@@ -863,73 +839,95 @@
   <!-- Header -->
   <div class="header">
     <div class="header-car">
-      <div class="car-badge">№</div>
+      <div class="car-badge">🚛 авто</div>
       <div class="car-number" id="display-car-number"></div>
     </div>
     <button class="btn-finish" onclick="askFinish()">ЗАВЕРШИТИ<br>МАШИНУ</button>
   </div>
 
   <!-- Stats bar -->
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-label">Колод</div>
-    <div class="stat-value" id="stat-count">0</div>
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-label">Колод</div>
+      <div class="stat-value" id="stat-count">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Об'єм загальний</div>
+      <div class="stat-value" id="stat-volume">0.000 <span>м³</span></div>
+    </div>
   </div>
-  <div class="stat-item">
-    <div class="stat-label">Об'єм загальний</div>
-    <div class="stat-value" id="stat-volume">0.000 <span>м³</span></div>
-  </div>
-  <button class="btn-sync" id="btn-sync" onclick="syncData()" style="margin-left:auto">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-      <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-    </svg>
-    СИНХ
-  </button>
-</div>
 
   <!-- Input area -->
   <div class="input-area">
-  <div class="field-wrap">
-    <div class="field-label">Довжина (см)</div>
-    <input type="text" readonly id="field-length" class="field-input" placeholder="0" />
+    <div class="field-wrap">
+      <div class="field-label">Довжина (м)</div>
+      <input
+        type="text" readonly
+        id="field-length"
+        class="field-input"
+        placeholder="0.00"
+        onclick="setFocus('length')"
+      />
+      <div class="field-unit">МЕТРИ</div>
     </div>
-  <div class="field-wrap">
-    <div class="field-label">Діаметр (см)</div>
-    <input type="text" readonly id="field-diameter" class="field-input active" placeholder="0" />
+    <div class="field-wrap">
+      <div class="field-label">Діаметр (см)</div>
+      <input
+        type="text" readonly
+        id="field-diameter"
+        class="field-input active"
+        placeholder="00"
+        onclick="setFocus('diameter')"
+      />
+      <div class="field-unit">САНТИМЕТРИ</div>
     </div>
-  <button class="btn-journal-side" onclick="openJournal()">📋</button>
-</div>
+    <button class="btn-add" onclick="addEntry()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span class="btn-add-label">ДОДАТИ</span>
+    </button>
+  </div>
 
   <!-- Recent log -->
   <div class="recent-section">
     <div class="recent-header">
       <div class="recent-title">Останні записи</div>
+      <button class="btn-journal" onclick="openJournal()">📋 ЖУРНАЛ</button>
     </div>
     <div class="log-list" id="recent-list">
       <div class="empty-state">Немає записів</div>
     </div>
   </div>
 
-
-
-<!-- Keyboard -->
-<div class="keyboard">
-  <div class="keyboard-grid">
-    <div class="key" onclick="keyPress('7')">7</div>
-    <div class="key" onclick="keyPress('8')">8</div>
-    <div class="key" onclick="keyPress('9')">9</div>
-    <div class="key" onclick="keyPress('4')">4</div>
-    <div class="key" onclick="keyPress('5')">5</div>
-    <div class="key" onclick="keyPress('6')">6</div>
-    <div class="key" onclick="keyPress('1')">1</div>
-    <div class="key" onclick="keyPress('2')">2</div>
-    <div class="key" onclick="keyPress('3')">3</div>
-    <div class="key key-clear" onclick="keyPress('C')">⌫ CLR</div>
-    <div class="key" onclick="keyPress('0')">0</div>
-    <div class="key key-add" onclick="addEntry()">+</div>
+  <!-- Sync bar -->
+  <div class="sync-bar">
+    <button class="btn-sync" id="btn-sync" onclick="syncData()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+        <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+      </svg>
+      СИНХРОНІЗУВАТИ
+    </button>
   </div>
-</div>
+
+  <!-- Keyboard -->
+  <div class="keyboard">
+    <div class="keyboard-grid">
+      <div class="key" onclick="keyPress('7')">7</div>
+      <div class="key" onclick="keyPress('8')">8</div>
+      <div class="key" onclick="keyPress('9')">9</div>
+      <div class="key" onclick="keyPress('4')">4</div>
+      <div class="key" onclick="keyPress('5')">5</div>
+      <div class="key" onclick="keyPress('6')">6</div>
+      <div class="key" onclick="keyPress('1')">1</div>
+      <div class="key" onclick="keyPress('2')">2</div>
+      <div class="key" onclick="keyPress('3')">3</div>
+      <div class="key key-zero" onclick="keyPress('0')">0</div>
+      <div class="key key-dot" onclick="keyPress('.')">·</div>
+      <div class="key key-clear" onclick="keyPress('C')">⌫ CLR</div>
+    </div>
+  </div>
 
 </div>
 
@@ -963,7 +961,6 @@
 // ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyOioANbi0pYEqgfqXAsc2oDFBk5y_PPtf4wKjRy8quYfVuUMtJG-W-IdygrwHltUvW/exec';
 const STATE_KEY = 'lisOblik_state';
 let state = {
   carNumber: '',
@@ -977,22 +974,25 @@ let activeField = 'diameter'; // 'length' | 'diameter'
 //  PERSISTENCE
 // ══════════════════════════════════════════
 function saveState() {
-  const data = JSON.stringify(state);
-  try { localStorage.setItem(STATE_KEY, data); } catch(e) {}
-  try { sessionStorage.setItem(STATE_KEY, data); } catch(e) {}
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
 }
 
 function loadState() {
   try {
-    const s = localStorage.getItem(STATE_KEY) || sessionStorage.getItem(STATE_KEY);
+    const s = localStorage.getItem(STATE_KEY);
     if (s) state = JSON.parse(s);
   } catch(e) {}
 }
 
 function getGasUrl() {
-  return GAS_URL;
+  return localStorage.getItem('lisOblik_gasUrl') || '';
 }
 
+function saveGasUrl() {
+  const url = document.getElementById('gas-url-input').value.trim();
+  localStorage.setItem('lisOblik_gasUrl', url);
+  showToast('URL збережено ✓', 'success');
+}
 
 // ══════════════════════════════════════════
 //  INIT
@@ -1023,6 +1023,10 @@ function startSession() {
   showMainScreen();
 }
 
+function toggleConfig() {
+  const body = document.getElementById('config-body');
+  body.classList.toggle('open');
+}
 
 // ══════════════════════════════════════════
 //  SCREEN MANAGEMENT
@@ -1041,12 +1045,8 @@ function showMainScreen() {
 // ══════════════════════════════════════════
 function setFocus(field) {
   activeField = field;
-  const lEl = document.getElementById('field-length');
-  const dEl = document.getElementById('field-diameter');
-  lEl.classList.toggle('active', field === 'length');
-  dEl.classList.toggle('active', field === 'diameter');
-  lEl.classList.toggle('has-value', lEl.value.length > 0);
-  dEl.classList.toggle('has-value', dEl.value.length > 0);
+  document.getElementById('field-length').classList.toggle('active', field === 'length');
+  document.getElementById('field-diameter').classList.toggle('active', field === 'diameter');
 }
 
 function keyPress(key) {
@@ -1074,10 +1074,9 @@ function keyPress(key) {
 // ══════════════════════════════════════════
 //  ADD ENTRY
 // ══════════════════════════════════════════
-function calcVolume(lengthCm, diamCm) {
+function calcVolume(lengthM, diamCm) {
   const r = (diamCm / 100) / 2;
-  const L = lengthCm / 100;
-  return Math.PI * r * r * L;
+  return Math.PI * r * r * lengthM;
 }
 
 function addEntry() {
@@ -1102,6 +1101,7 @@ function addEntry() {
   state.entries.push(entry);
   saveState();
 
+  // Clear diameter, keep length
   dEl.value = '';
   dEl.classList.remove('has-value');
   setFocus('diameter');
@@ -1157,15 +1157,15 @@ function logItemHTML(e, modal = false) {
     <div class="log-num">#${e.id}</div>
     <div class="log-data">
       <div class="log-field">
-        <div class="log-field-label">Довжина</div>
+        <div class="log-field-label">L</div>
         <div class="log-field-val">${e.length.toFixed(2)}</div>
       </div>
       <div class="log-field">
-        <div class="log-field-label">Діаметр</div>
+        <div class="log-field-label">D</div>
         <div class="log-field-val">${e.diameter}</div>
       </div>
       <div class="log-vol">
-        <div class="log-vol-label">Об'єм м³</div>
+        <div class="log-vol-label">V м³</div>
         <div class="log-vol-val">${e.volume.toFixed(3)}</div>
       </div>
     </div>
@@ -1358,11 +1358,7 @@ function showToast(msg, type = '') {
 
 // Prevent keyboard on touch for readonly inputs
 document.querySelectorAll('.field-input').forEach(el => {
-  el.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const field = el.id === 'field-length' ? 'length' : 'diameter';
-    setFocus(field);
-  }, { passive: false });
+  el.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
 });
 </script>
 </body>
