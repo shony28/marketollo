@@ -1325,22 +1325,22 @@ async function finishSession() {
 
   if (gasUrl) {
     const unsynced = state.entries.filter(e => !e.synced);
-    if (unsynced.length > 0) {
-      try {
-        await fetch(gasUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'finish',
-            carNumber: state.carNumber,
-            entries: unsynced.map(e => ({
-              id: e.id, length: e.length, diameter: e.diameter, volume: e.volume
-            }))
-          })
-        });
-      } catch(e) {}
-    }
+    try {
+      // Завжди відправляємо 'finish' — навіть якщо всі записи вже синхронізовані.
+      // GAS потребує цього сигналу щоб додати підсумкові рядки РАЗОМ/Колод.
+      await fetch(gasUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'finish',
+          carNumber: state.carNumber,
+          entries: unsynced.map(e => ({
+            id: e.id, length: e.length, diameter: e.diameter, volume: e.volume
+          }))
+        })
+      });
+    } catch(e) {}
   }
 
   // Reset
