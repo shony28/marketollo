@@ -798,6 +798,39 @@
   }
 
   .config-save:active { background: var(--blue); color: #0d1117; }
+
+  .key-add {
+  background: var(--green);
+  border-color: var(--green);
+  color: #0d1117;
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.key-add:active {
+  background: #2ea043;
+  border-color: #2ea043;
+}
+
+.btn-journal-side {
+  align-self: flex-end;
+  width: 70px;
+  height: 68px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 26px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+
+.btn-journal-side:active {
+  background: var(--border);
+}
 </style>
 </head>
 <body>
@@ -850,36 +883,19 @@
   </div>
 
   <!-- Input area -->
-  <div class="input-area">
-    <div class="field-wrap">
-      <div class="field-label">Довжина (см)</div>
-      <input
-        type="text" readonly
-        id="field-length"
-        class="field-input"
-        placeholder="000"
-        onclick="setFocus('length')"
-      />
-      
+    <div class="input-area">
+      <div class="field-wrap">
+        <div class="field-label">Довжина (см)</div>
+        <input type="text" readonly id="field-length" class="field-input" placeholder="0" />
+        <div class="field-unit">САНТИМЕТРИ</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">Діаметр (см)</div>
+        <input type="text" readonly id="field-diameter" class="field-input active" placeholder="0" />
+        <div class="field-unit">САНТИМЕТРИ</div>
+      </div>
+      <button class="btn-journal-side" onclick="openJournal()">📋</button>
     </div>
-    <div class="field-wrap">
-      <div class="field-label">Діаметр (см)</div>
-      <input
-        type="text" readonly
-        id="field-diameter"
-        class="field-input active"
-        placeholder="00"
-        onclick="setFocus('diameter')"
-      />
-      
-    </div>
-    <button class="btn-add" onclick="addEntry()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
-      <span class="btn-add-label">ДОДАТИ</span>
-    </button>
-  </div>
 
   <!-- Recent log -->
   <div class="recent-section">
