@@ -977,12 +977,14 @@ let activeField = 'diameter'; // 'length' | 'diameter'
 //  PERSISTENCE
 // ══════════════════════════════════════════
 function saveState() {
-  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  const data = JSON.stringify(state);
+  try { localStorage.setItem(STATE_KEY, data); } catch(e) {}
+  try { sessionStorage.setItem(STATE_KEY, data); } catch(e) {}
 }
 
 function loadState() {
   try {
-    const s = localStorage.getItem(STATE_KEY);
+    const s = localStorage.getItem(STATE_KEY) || sessionStorage.getItem(STATE_KEY);
     if (s) state = JSON.parse(s);
   } catch(e) {}
 }
