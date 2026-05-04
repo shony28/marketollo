@@ -972,7 +972,9 @@ const STATE_KEY = 'lisOblik_state';
 let state = {
   carNumber: '',
   entries: [],        // {id, length, diameter, volume, synced}
-  nextId: 1
+  nextId: 1,
+  currentLength: '',   
+  currentDiameter: ''  
 };
 
 let activeField = 'diameter'; // 'length' | 'diameter'
@@ -1034,6 +1036,19 @@ function showMainScreen() {
   const main = document.getElementById('screen-main');
   main.style.display = 'flex';
   document.getElementById('display-car-number').textContent = state.carNumber;
+
+  // Відновити збережені значення полів
+  const lEl = document.getElementById('field-length');
+  const dEl = document.getElementById('field-diameter');
+  if (state.currentLength) {
+    lEl.value = state.currentLength;
+    lEl.classList.toggle('has-value', true);
+  }
+  if (state.currentDiameter) {
+    dEl.value = state.currentDiameter;
+    dEl.classList.toggle('has-value', true);
+  }
+
   setFocus('diameter');
   renderAll();
 }
@@ -1058,19 +1073,23 @@ function keyPress(key) {
   if (key === 'C') {
     el.value = '';
     el.classList.remove('has-value');
+    if (activeField === 'length') state.currentLength = '';
+    else state.currentDiameter = '';
+    saveState();
     return;
   }
 
-  // Allow only one dot
   if (key === '.' && val.includes('.')) return;
-  // Max length guard
   if (val.length >= 8) return;
-  // Prevent leading zeros (except "0.")
   if (val === '0' && key !== '.') return;
 
   val += key;
   el.value = val;
   el.classList.toggle('has-value', val.length > 0);
+
+  if (activeField === 'length') state.currentLength = val;
+  else state.currentDiameter = val;
+  saveState();
 }
 
 // ══════════════════════════════════════════
@@ -1102,16 +1121,17 @@ function addEntry() {
     synced: false
   };
   state.entries.push(entry);
-  saveState();
 
   dEl.value = '';
   dEl.classList.remove('has-value');
-  setFocus('diameter');
+  state.currentDiameter = '';
+  // Довжина залишається — не очищаємо state.currentLength
+  saveState();
 
+  setFocus('diameter');
   renderAll();
   showToast(`Колода #${entry.id} додана`, 'success');
 }
-
 // ══════════════════════════════════════════
 //  RENDER
 // ══════════════════════════════════════════
@@ -1311,11 +1331,9 @@ async function finishSession() {
     }
   }
 
-  // Reset
-  state = { carNumber: '', entries: [], nextId: 1 };
+  state = { carNumber: '', entries: [], nextId: 1, currentLength: '', currentDiameter: '' };
   saveState();
 
-  // Go back to registration
   document.getElementById('screen-main').style.display = 'none';
   document.getElementById('car-input').value = '';
   document.getElementById('screen-reg').style.display = 'flex';
