@@ -824,13 +824,6 @@
 
   <button class="btn-start" onclick="startSession()">ПОЧАТИ РОБОТУ</button>
 
-  <div class="config-section">
-    <button class="config-toggle" onclick="toggleConfig()">⚙ НАЛАШТУВАННЯ GAS URL</button>
-    <div class="config-body" id="config-body">
-      <input type="text" id="gas-url-input" class="config-input" placeholder="https://script.google.com/macros/s/.../exec" />
-      <button class="config-save" onclick="saveGasUrl()">ЗБЕРЕГТИ URL</button>
-    </div>
-  </div>
 </div>
 
 <!-- ══════ MAIN SCREEN ══════ -->
@@ -860,7 +853,7 @@
   <!-- Input area -->
   <div class="input-area">
     <div class="field-wrap">
-      <div class="field-label">Довжина (м)</div>
+      <div class="field-label">Довжина (см)</div>
       <input
         type="text" readonly
         id="field-length"
@@ -868,7 +861,7 @@
         placeholder="0.00"
         onclick="setFocus('length')"
       />
-      <div class="field-unit">МЕТРИ</div>
+      <div class="field-unit">САНТИМЕТРИ</div>
     </div>
     <div class="field-wrap">
       <div class="field-label">Діаметр (см)</div>
@@ -958,6 +951,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyOioANbi0pYEqgfqXAsc2oDFBk5y_PPtf4wKjRy8quYfVuUMtJG-W-IdygrwHltUvW/exec';
 // ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
@@ -985,14 +979,10 @@ function loadState() {
 }
 
 function getGasUrl() {
-  return localStorage.getItem('lisOblik_gasUrl') || '';
+  return GAS_URL;
 }
 
-function saveGasUrl() {
-  const url = document.getElementById('gas-url-input').value.trim();
-  localStorage.setItem('lisOblik_gasUrl', url);
-  showToast('URL збережено ✓', 'success');
-}
+
 
 // ══════════════════════════════════════════
 //  INIT
@@ -1023,10 +1013,7 @@ function startSession() {
   showMainScreen();
 }
 
-function toggleConfig() {
-  const body = document.getElementById('config-body');
-  body.classList.toggle('open');
-}
+
 
 // ══════════════════════════════════════════
 //  SCREEN MANAGEMENT
@@ -1045,8 +1032,12 @@ function showMainScreen() {
 // ══════════════════════════════════════════
 function setFocus(field) {
   activeField = field;
-  document.getElementById('field-length').classList.toggle('active', field === 'length');
-  document.getElementById('field-diameter').classList.toggle('active', field === 'diameter');
+  const lEl = document.getElementById('field-length');
+  const dEl = document.getElementById('field-diameter');
+  lEl.classList.toggle('active', field === 'length');
+  dEl.classList.toggle('active', field === 'diameter');
+  lEl.classList.toggle('has-value', lEl.value.length > 0);
+  dEl.classList.toggle('has-value', dEl.value.length > 0);
 }
 
 function keyPress(key) {
@@ -1074,9 +1065,10 @@ function keyPress(key) {
 // ══════════════════════════════════════════
 //  ADD ENTRY
 // ══════════════════════════════════════════
-function calcVolume(lengthM, diamCm) {
+function calcVolume(lengthCm, diamCm) {
   const r = (diamCm / 100) / 2;
-  return Math.PI * r * r * lengthM;
+  const L = lengthCm / 100;
+  return Math.PI * r * r * L;
 }
 
 function addEntry() {
@@ -1101,7 +1093,6 @@ function addEntry() {
   state.entries.push(entry);
   saveState();
 
-  // Clear diameter, keep length
   dEl.value = '';
   dEl.classList.remove('has-value');
   setFocus('diameter');
@@ -1358,7 +1349,11 @@ function showToast(msg, type = '') {
 
 // Prevent keyboard on touch for readonly inputs
 document.querySelectorAll('.field-input').forEach(el => {
-  el.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const field = el.id === 'field-length' ? 'length' : 'diameter';
+    setFocus(field);
+  }, { passive: false });
 });
 </script>
 </body>
