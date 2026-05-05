@@ -854,6 +854,28 @@
     />
   </div>
 
+  <div class="reg-label">Лісгосп / організація</div>
+  <div class="reg-input-wrap">
+    <select id="org-select" class="reg-input" style="font-size:16px; letter-spacing:1px; cursor:pointer;">
+      <option value="">— оберіть —</option>
+      <option value="Центральний ЛО">Центральний ЛО</option>
+      <option value="Подільський ЛО">Подільський ЛО</option>
+      <option value="Столичний ЛО">Столичний ЛО</option>
+      <option value="Берегівське ліс.">Берегівське ліс.</option>
+      <option value="Хустське ліс.">Хустське ліс.</option>
+      <option value="Інше">Інше</option>
+    </select>
+  </div>
+
+  <div class="reg-label">Порода деревини</div>
+  <div class="reg-input-wrap">
+    <select id="wood-select" class="reg-input" style="font-size:20px; letter-spacing:1px; cursor:pointer;">
+      <option value="">— оберіть —</option>
+      <option value="Бук">Бук</option>
+      <option value="Дуб">Дуб</option>
+    </select>
+  </div>
+
   <button class="btn-start" onclick="startSession()">ПОЧАТИ РОБОТУ</button>
 
 </div>
@@ -1024,9 +1046,17 @@ window.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════
 function startSession() {
   const carInput = document.getElementById('car-input');
+  const orgSelect = document.getElementById('org-select');
+  const woodSelect = document.getElementById('wood-select');
   const car = carInput.value.trim().toUpperCase();
+
   if (!car) { carInput.style.borderColor = 'var(--red)'; return; }
+  if (!orgSelect.value) { orgSelect.style.borderColor = 'var(--red)'; return; }
+  if (!woodSelect.value) { woodSelect.style.borderColor = 'var(--red)'; return; }
+
   state.carNumber = car;
+  state.organization = orgSelect.value;
+  state.woodType = woodSelect.value;
   state.entries = [];
   state.nextId = 1;
   saveState();
@@ -1370,7 +1400,6 @@ function askFinish() {
 async function finishSession() {
   closeConfirm();
 
-  // Показати екран завантаження
   const loadingEl = document.getElementById('screen-loading');
   loadingEl.style.display = 'flex';
 
@@ -1379,8 +1408,6 @@ async function finishSession() {
   if (gasUrl) {
     const unsynced = state.entries.filter(e => !e.synced);
     try {
-      // Завжди відправляємо 'finish' — навіть якщо всі записи вже синхронізовані.
-      // GAS потребує цього сигналу щоб додати підсумкові рядки РАЗОМ/Колод.
       await fetch(gasUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -1388,6 +1415,8 @@ async function finishSession() {
         body: JSON.stringify({
           action: 'finish',
           carNumber: state.carNumber,
+          organization: state.organization || '',
+          woodType: state.woodType || '',
           entries: unsynced.map(e => ({
             id: e.id, length: e.length, diameter: e.diameter, volume: e.volume
           }))
@@ -1396,14 +1425,14 @@ async function finishSession() {
     } catch(e) {}
   }
 
-  // Reset
-  state = { carNumber: '', entries: [], nextId: 1 };
+  state = { carNumber: '', entries: [], nextId: 1, currentLength: '', currentDiameter: '' };
   saveState();
 
-  // Приховати завантаження та показати початковий екран
   loadingEl.style.display = 'none';
   document.getElementById('screen-main').style.display = 'none';
   document.getElementById('car-input').value = '';
+  document.getElementById('org-select').value = '';
+  document.getElementById('wood-select').value = '';
   document.getElementById('screen-reg').style.display = 'flex';
   showToast('Машину завершено. Дякуємо!', 'success');
 }
