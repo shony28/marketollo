@@ -1494,6 +1494,36 @@ document.querySelectorAll('.field-input').forEach(el => {
     setFocus(field);
   }, { passive: false });
 });
+
+// ══════════════════════════════════════════
+//  KEYBOARD INPUT (ПК)
+// ══════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  // Працює лише коли відкритий головний екран
+  if (document.getElementById('screen-main').style.display === 'none') return;
+  // Ігноруємо якщо фокус на текстовому полі (реєстрація, налаштування тощо)
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) &&
+      !e.target.classList.contains('field-input')) return;
+
+  if (e.key >= '0' && e.key <= '9') { keyPress(e.key); return; }
+  if (e.key === '.' || e.key === ',') { keyPress('.'); return; }
+  if (e.key === 'Backspace') {
+    const el = document.getElementById(activeField === 'length' ? 'field-length' : 'field-diameter');
+    el.value = el.value.slice(0, -1);
+    el.classList.toggle('has-value', el.value.length > 0);
+    if (activeField === 'length') state.currentLength = el.value;
+    else state.currentDiameter = el.value;
+    saveState();
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Escape') { keyPress('C'); return; }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    setFocus(activeField === 'length' ? 'diameter' : 'length');
+    return;
+  }
+  if (e.key === 'Enter') { addEntry(); return; }
+});
 </script>
 </body>
 </html>
