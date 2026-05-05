@@ -1240,7 +1240,7 @@ function renderStats() {
 
 function renderRecent() {
   const list = document.getElementById('recent-list');
-  const last3 = state.entries.slice(-3).reverse();
+  const last3 = state.entries.slice(-2).reverse();
   if (!last3.length) {
     list.innerHTML = '<div class="empty-state">Немає записів</div>';
     return;
