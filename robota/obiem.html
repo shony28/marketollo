@@ -809,23 +809,37 @@
 }
 
 .btn-journal-side {
-  align-self: flex-end;
-  width: 70px;
-  height: 68px;
-  background: var(--surface2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 26px;
+  border-radius: 6px;
+  padding: 0 12px;
+  height: 36px;
+  font-size: 13px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
   flex-shrink: 0;
   transition: background .15s;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
 }
-
 .btn-journal-side:active {
   background: var(--border);
+  color: var(--text);
+}
+
+.sort-c-badge {
+  display: inline-block;
+  background: var(--amber-dim);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 1px;
+  margin-left: 4px;
 }
 
 @keyframes spin {
@@ -909,6 +923,7 @@
     </svg>
     СИНХ
   </button>
+  <button class="btn-journal-side" onclick="openJournal()" style="margin-left:8px; height:36px; width:auto; padding:0 12px; font-size:13px; border-radius:6px;">📋 ЖУРНАЛ</button>
 </div>
 
   <!-- Input area -->
@@ -923,7 +938,12 @@
         <input type="text" readonly id="field-diameter" class="field-input active" placeholder="0" />
         
       </div>
-      <button class="btn-journal-side" onclick="openJournal()">📋</button>
+      <div class="field-wrap" style="flex:0; align-self:flex-end; display:flex; flex-direction:column; align-items:center; gap:5px; margin-bottom:0;">
+        <div class="field-label" style="text-align:center;">Сорт С</div>
+        <label style="width:68px; height:68px; background:var(--surface); border:2px solid var(--border); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+          <input type="checkbox" id="chk-sort-c" style="width:32px; height:32px; cursor:pointer; accent-color:var(--amber);" />
+        </label>
+      </div>
     </div>
 
   <!-- Recent log -->
@@ -1000,7 +1020,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyOioANbi0pYEqgfqXAsc2o
 const STATE_KEY = 'lisOblik_state';
 let state = {
   carNumber: '',
-  entries: [],        // {id, length, diameter, volume, synced}
+  entries: [],        // {id, length, diameter, volume, synced, sortC}
   nextId: 1,
   currentLength: '',   
   currentDiameter: ''  
@@ -1216,24 +1236,27 @@ function addEntry() {
   }
 
   const V = calcVolume(L, D);
+  const chkSortC = document.getElementById('chk-sort-c');
   const entry = {
     id: state.nextId++,
     length: L,
     diameter: D,
     volume: V,
-    synced: false
+    synced: false,
+    sortC: chkSortC.checked
   };
   state.entries.push(entry);
 
   dEl.value = '';
   dEl.classList.remove('has-value');
   state.currentDiameter = '';
+  chkSortC.checked = false;  // скидаємо чекбокс
   // Довжина залишається — не очищаємо state.currentLength
   saveState();
 
   setFocus('diameter');
   renderAll();
-  showToast(`Колода #${entry.id} додана`, 'success');
+  showToast(`Колода #${entry.id} додана${entry.sortC ? ' [С]' : ''}`, 'success');
 }
 // ══════════════════════════════════════════
 //  RENDER
@@ -1279,7 +1302,7 @@ function logItemHTML(e, modal = false) {
        </button>`;
 
   return `<div class="${cls}">
-    <div class="log-num">#${e.id}</div>
+    <div class="log-num">#${e.id}${e.sortC ? '<br><span class="sort-c-badge">C</span>' : ''}</div>
     <div class="log-data">
       <div class="log-field">
         <div class="log-field-label">Довжина</div>
@@ -1362,7 +1385,8 @@ async function syncData() {
         id: e.id,
         length: e.length,
         diameter: e.diameter,
-        volume: e.volume
+        volume: e.volume,
+        sortC: e.sortC || false
       }))
     };
 
@@ -1431,7 +1455,7 @@ async function finishSession() {
           organization: state.organization || '',
           woodType: state.woodType || '',
           entries: unsynced.map(e => ({
-            id: e.id, length: e.length, diameter: e.diameter, volume: e.volume
+            id: e.id, length: e.length, diameter: e.diameter, volume: e.volume, sortC: e.sortC || false
           }))
         })
       });
