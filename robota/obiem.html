@@ -1113,9 +1113,20 @@ function showMainScreen() {
 //  KEYBOARD LOGIC
 // ══════════════════════════════════════════
 function setFocus(field) {
-  activeField = field;
   const lEl = document.getElementById('field-length');
   const dEl = document.getElementById('field-diameter');
+
+  // Якщо поле вже активне — очищаємо його
+  if (activeField === field) {
+    const el = field === 'length' ? lEl : dEl;
+    el.value = '';
+    el.classList.remove('has-value');
+    if (field === 'length') state.currentLength = '';
+    else state.currentDiameter = '';
+    saveState();
+  }
+
+  activeField = field;
   lEl.classList.toggle('active', field === 'length');
   dEl.classList.toggle('active', field === 'diameter');
   lEl.classList.toggle('has-value', lEl.value.length > 0);
@@ -1610,6 +1621,7 @@ function showToast(msg, type = '') {
   _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
+
 // Prevent keyboard on touch for readonly inputs
 document.querySelectorAll('.field-input').forEach(el => {
   el.addEventListener('touchstart', e => {
@@ -1617,6 +1629,12 @@ document.querySelectorAll('.field-input').forEach(el => {
     const field = el.id === 'field-length' ? 'length' : 'diameter';
     setFocus(field);
   }, { passive: false });
+
+  el.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const field = el.id === 'field-length' ? 'length' : 'diameter';
+    setFocus(field);
+  });
 });
 
 // ══════════════════════════════════════════
