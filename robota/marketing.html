@@ -61,6 +61,24 @@
       transition: all 0.3s ease;
     }
 
+    #myCreatedTasks {
+      display: none;
+      max-width: 800px;
+      margin: 0 auto 20px;
+    }
+    #myCreatedTasks h3 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 12px;
+    }
+    .btn-created {
+      background: #8e44ad !important;
+    }
+    .btn-created.active {
+      background: #6c3483 !important;
+      box-shadow: 0 0 0 3px rgba(142,68,173,0.3);
+    }
+
     #userInfo {
   display: flex;
   align-items: center;
@@ -198,13 +216,21 @@
   <div id="appContainer">
     <div id="userInfo"></div>
     <div id="deptAlerts"></div>
-    <div class="header-actions">
-            <div>
-              <h2 style="margin-bottom: 2px;">📋 Мої завдання</h2>
-              <p id="deptSubtitle" style="margin: 0; color: #999; font-size: 0.85em;">Маркетинговий в-л</p>
-            </div>
-      <button onclick="toggleCreateForm(true)" style="background: #2ecc71;">+ Створити</button>
-    </div>
+      <div class="header-actions">
+        <div>
+          <h2 style="margin-bottom: 2px;">📋 Мої завдання</h2>
+          <p id="deptSubtitle" style="margin: 0; color: #999; font-size: 0.85em;">Маркетинговий в-л</p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+          <button id="btnCreatedTasks" class="btn-created" onclick="toggleCreatedTasksPanel()">📤 Завдання створені мною</button>
+          <button onclick="toggleCreateForm(true)" style="background: #2ecc71;">+ Створити</button>
+        </div>
+      </div>
+
+      <div id="myCreatedTasks">
+        <h3>📤 Завдання, створені мною</h3>
+        <div id="createdTasksList"></div>
+      </div>
 
     <div id="createForm">
       <h3 style="margin-top:0">Нове завдання</h3>
@@ -875,6 +901,94 @@ function startAutoRefresh() {
         console.log("Автоматичне оновлення завдань...");
         loadTasks();
     }, AUTO_REFRESH_MINUTES * 60 * 1000);
+}
+
+function toggleCreatedTasksPanel() {
+  const panel = document.getElementById('myCreatedTasks');
+  const btn = document.getElementById('btnCreatedTasks');
+  const isVisible = panel.style.display === 'block';
+
+  if (isVisible) {
+    panel.style.display = 'none';
+    btn.classList.remove('active');
+  } else {
+    panel.style.display = 'block';
+    btn.classList.add('active');
+    loadCreatedTasks();
+  }
+}
+
+function loadCreatedTasks() {
+  const listEl = document.getElementById('createdTasksList');
+  listEl.innerHTML = '<p style="text-align:center; color:#999;">⏳ Завантаження...</p>';
+
+  const cfg = activeDept ? deptConfigs[activeDept] : null;
+  const currentApiUrl = cfg ? cfg.API_URL : API_URL;
+
+  fetch(currentApiUrl + "?action=getTasks")
+    .then(res => res.json())
+    .then(rows => {
+      // Фільтр: creatorEmail === currentUserEmail, але userEmail !== currentUserEmail
+      const tasks = rows
+        .filter(row =>
+          row.title &&
+          row.creatorEmail &&
+          row.creatorEmail.toLowerCase() === currentUserEmail.toLowerCase() &&
+          row.userEmail.toLowerCase() !== currentUserEmail.toLowerCase()
+        )
+        .map(row => {
+          let rawDate = null;
+          if (row.date) rawDate = new Date(row.date + 'T00:00:00');
+          return {
+            row:          row.row,
+            title:        row.title,
+            project:      row.project,
+            client:       row.client,
+            assignedBy:   row.assignedBy,
+            worker:       row.worker,
+            status:       row.status,
+            userEmail:    row.userEmail,
+            creatorEmail: row.creatorEmail,
+            priorityDate: rawDate && !isNaN(rawDate) ? rawDate : new Date(2099, 11, 31)
+          };
+        });
+
+      if (tasks.length === 0) {
+        listEl.innerHTML = '<p style="text-align:center; color:#999;">Немає завдань, призначених вами іншим</p>';
+        return;
+      }
+
+      listEl.innerHTML = '';
+      tasks.forEach(task => listEl.appendChild(createAssignedTaskCard(task)));
+    })
+    .catch(err => {
+      listEl.innerHTML = '<p style="text-align:center; color:red;">Помилка завантаження</p>';
+      console.error(err);
+    });
+}
+
+function createAssignedTaskCard(task) {
+  const div = document.createElement('div');
+  div.className = 'task-card';
+  div.setAttribute('data-status', task.status);
+
+  const dateString = task.priorityDate.getFullYear() === 2099
+    ? 'не вказано'
+    : task.priorityDate.toLocaleDateString('uk-UA');
+
+  div.innerHTML = `
+    <div class="task-info">
+      <span class="status-badge ${getStatusClass(task.status)}">${task.status}</span><br>
+      <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
+        ${task.project ? `<strong>📁 ${task.project}</strong>` : ''}
+        ${task.client ? `<span style="color:#777;">🤝 ${task.client}</span>` : ''}
+      </div>
+      <strong>${task.title}</strong>
+      <small>Виконавець: ${task.worker || 'не вказано'}</small>
+      <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
+    </div>
+  `;
+  return div;
 }
 
 
