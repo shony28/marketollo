@@ -149,6 +149,35 @@
   flex-shrink: 0;
   /*margin-left: auto; /* притиснути до правого краю, або прибрати якщо не потрібно */
 }
+
+/* Модальне вікно підтвердження статусу */
+.status-confirm-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.status-confirm-box {
+  background: white; border-radius: 14px; padding: 28px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18); max-width: 340px; width: 90%;
+  text-align: center;
+}
+.status-confirm-box p { margin: 0 0 8px; font-size: 1em; color: #555; }
+.status-confirm-box .confirm-badge {
+  display: inline-block; margin: 8px 0 20px;
+  font-size: 0.85em; padding: 5px 16px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;
+}
+.status-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+.btn-confirm { background: #2ecc71; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+.btn-confirm:hover { background: #27ae60; }
+.btn-confirm:disabled { background: #a8e6c1; cursor: not-allowed; }
+.btn-reject { background: #b2bec3; color: #2c3e50; border: none; border-radius: 8px; padding: 10px 24px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+.btn-reject:hover { background: #95a5a6; }
+.btn-confirm .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Select без кнопки — займає всю ширину */
+.task-controls select { flex: 1; }
   </style>
 </head>
 <body>
@@ -510,49 +539,84 @@ function createTaskCard(task) {
       <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
     </div>
     <div class="task-controls">
-      <select id="status-${task.row}">
+      <select id="status-${task.row}" onchange="confirmStatusChange(${task.row}, this)">
         <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
         <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
         <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
         <option value="Виконано" ${task.status === 'Виконано' ? 'selected' : ''}>Виконано</option>
-        
       </select>
-      <button onclick="updateStatus(${task.row})">Оновити</button>
     </div>
   `;
   return div;
 }
 
-function updateStatus(row) {
-      const btn = event.target;
-      const select = document.getElementById('status-' + row);
-      const newStatus = select.value;
-      
-      const cfg = activeDept ? deptConfigs[activeDept] : null;
-      const currentApiUrl = cfg ? cfg.API_URL : API_URL;
-      
-      btn.disabled = true;
-      btn.innerText = "⏳";
-      
-      fetch(currentApiUrl, {
-        method: "POST",
-        body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
-      })
-      .then(res => res.json())
-      .then(out => {
-        if (out.result === "success") { 
-            loadTasks(); 
-        } else { 
-            alert("Помилка сервера: " + out.message); 
-            btn.disabled = false; 
-            btn.innerText = "Оновити"; 
-        }
-      })
-      .catch(err => { 
-          alert("Помилка мережі: " + err); 
-          btn.disabled = false; 
-          btn.innerText = "Оновити"; 
-      });
+function confirmStatusChange(row, selectEl) {
+  const newStatus = selectEl.value;
+  const prevStatus = selectEl.dataset.prev || selectEl.querySelector('option[selected]')?.value || newStatus;
+
+  // Зберігаємо попереднє значення при першому відкритті
+  if (!selectEl.dataset.prev) {
+    const selected = selectEl.querySelector('option[selected]');
+    selectEl.dataset.prev = selected ? selected.value : newStatus;
+  }
+
+  const badgeClass = getStatusClass(newStatus);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'status-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="status-confirm-box">
+      <p>Ви змінюєте статус на:</p>
+      <span class="confirm-badge status-badge ${badgeClass}">${newStatus}</span>
+      <div class="status-confirm-actions">
+        <button class="btn-reject" id="reject-btn-${row}">Відхилити</button>
+        <button class="btn-confirm" id="confirm-btn-${row}">Підтвердити</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById(`reject-btn-${row}`).onclick = function() {
+    // Повертаємо попередній статус
+    selectEl.value = selectEl.dataset.prev;
+    overlay.remove();
+  };
+
+  document.getElementById(`confirm-btn-${row}`).onclick = function() {
+    const confirmBtn = this;
+    const rejectBtn = document.getElementById(`reject-btn-${row}`);
+    confirmBtn.disabled = true;
+    rejectBtn.disabled = true;
+    confirmBtn.innerHTML = `<span class="spinner"></span>Збереження...`;
+    updateStatus(row, newStatus, overlay, selectEl);
+  };
+}
+
+function updateStatus(row, newStatus, overlay, selectEl) {
+  const cfg = activeDept ? deptConfigs[activeDept] : null;
+  const currentApiUrl = cfg ? cfg.API_URL : API_URL;
+
+  fetch(currentApiUrl, {
+    method: "POST",
+    body: JSON.stringify({ row: row, status: newStatus, userEmail: currentUserEmail })
+  })
+  .then(res => res.json())
+  .then(out => {
+    if (out.result === "success") {
+      overlay.remove();
+      loadTasks();
+    } else {
+      alert("Помилка сервера: " + out.message);
+      selectEl.value = selectEl.dataset.prev;
+      overlay.remove();
+    }
+  })
+  .catch(err => {
+    alert("Помилка мережі: " + err);
+    selectEl.value = selectEl.dataset.prev;
+    overlay.remove();
+  });
 }
 
     function getStatusClass(status) {
