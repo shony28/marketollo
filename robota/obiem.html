@@ -628,7 +628,7 @@
   /* Toast */
   .toast {
     position: fixed;
-    bottom: 24px;
+    top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
     background: var(--surface);
@@ -646,7 +646,7 @@
 
   .toast.show {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(-50%);
   }
 
   .toast.success { border-color: var(--green); color: var(--green); }
