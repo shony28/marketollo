@@ -573,7 +573,7 @@ function createTaskCard(task) {
       <small style="display: block; margin-top: 4px; color: #7f8c8d; font-weight: 500;">📅 Виконати до: ${dateString}</small>
     </div>
     <div class="task-controls">
-      <select id="status-${task.row}" onchange="confirmStatusChange(${task.row}, this)">
+      <select id="status-${task.row}" onchange="confirmStatusChange(${task.row}, this, '${task.title.replace(/'/g, "\\'")}')">
         <option value="Нове" ${task.status === 'Нове' ? 'selected' : ''}>Нове</option>
         <option value="В процесі" ${task.status === 'В процесі' ? 'selected' : ''}>В процесі</option>
         <option value="Пауза" ${task.status === 'Пауза' ? 'selected' : ''}>Пауза</option>
@@ -584,7 +584,7 @@ function createTaskCard(task) {
   return div;
 }
 
-function confirmStatusChange(row, selectEl) {
+function confirmStatusChange(row, selectEl, taskTitle) {
   const newStatus = selectEl.value;
   const prevStatus = selectEl.dataset.prev || selectEl.querySelector('option[selected]')?.value || newStatus;
 
@@ -600,6 +600,7 @@ function confirmStatusChange(row, selectEl) {
   overlay.className = 'status-confirm-overlay';
   overlay.innerHTML = `
     <div class="status-confirm-box">
+      <p>Завдання: <strong>${taskTitle}</strong></p>
       <p>Ви змінюєте статус на:</p>
       <span class="confirm-badge status-badge ${badgeClass}">${newStatus}</span>
       <div class="status-confirm-actions">
