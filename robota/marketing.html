@@ -299,6 +299,11 @@
     let activeDept = null;      // null = основний відділ, або назва іншого
     let isOtherDeptLoaded = false; // Прапорець, чи ми зараз дивимось інший відділ
     let formConfig = []; // Глобальна змінна для зберігання структури
+    
+    const FORM_CONFIG_KEY = 'createFormConfig';
+    const FORM_CONFIG_TTL_KEY = 'createFormConfigTime';
+    const FORM_CONFIG_TTL_MS = 24 * 60 * 60 * 1000; // 24 години
+    
     let currentOtherDeptName = ""; // Зберігатимемо назву підрозділу (напр. "marketing")
     // --- НАЛАШТУВАННЯ КОЛОНОК (Синхронізовано з TEST.js) ---
     // В JS масивах індексація починається з 0, тому віднімаємо 1 від номерів колонок таблиці
@@ -658,35 +663,46 @@ function updateStatus(row, newStatus, overlay, selectEl) {
       }
     }
 
-      function toggleCreateForm(show) {
-        const formContainer = document.getElementById('createForm');
-        
-        if (show) {
-          // 1. Показуємо форму миттєво
-          formContainer.style.display = 'block';
-          // 2. Очищуємо старий контент і показуємо лоадер
+    function toggleCreateForm(show) {
+      const formContainer = document.getElementById('createForm');
+
+      if (show) {
+        formContainer.style.display = 'block';
+
+        // Перевіряємо кеш у localStorage
+        const cachedConfig = localStorage.getItem(FORM_CONFIG_KEY);
+        const cachedTime = localStorage.getItem(FORM_CONFIG_TTL_KEY);
+        const isFresh = cachedTime && (Date.now() - parseInt(cachedTime)) < FORM_CONFIG_TTL_MS;
+
+        if (cachedConfig && isFresh) {
+          // Використовуємо кеш — без запиту до таблиці
+          formConfig = JSON.parse(cachedConfig);
+          renderDynamicFields(formConfig);
+        } else {
+          // Кешу немає або застарів — завантажуємо з таблиці
           formContainer.innerHTML = `
             <h3 style="margin-top:0">Нове завдання</h3>
             <div id="formLoader" style="text-align:center; padding: 20px;">
               <span style="color: #666;">⏳ Завантаження конфігурації...</span>
             </div>
           `;
-
-          // 3. Запускаємо фонове завантаження полів
           fetch(API_URL)
             .then(res => res.json())
             .then(structure => {
               formConfig = structure;
-              renderDynamicFields(structure); // Малюємо тільки поля всередині
+              localStorage.setItem(FORM_CONFIG_KEY, JSON.stringify(structure));
+              localStorage.setItem(FORM_CONFIG_TTL_KEY, Date.now().toString());
+              renderDynamicFields(structure);
             })
             .catch(err => {
               formContainer.innerHTML += `<p style="color:red">Помилка завантаження: ${err}</p>
               <button class="btn-cancel" onclick="toggleCreateForm(false)">Закрити</button>`;
             });
-        } else {
-          formContainer.style.display = 'none';
         }
+      } else {
+        formContainer.style.display = 'none';
       }
+    }
 
       function renderDynamicForm(fields) {
           const container = document.getElementById('createForm');
@@ -719,15 +735,25 @@ function updateStatus(row, newStatus, overlay, selectEl) {
         }
 
         function renderDynamicFields(fields) {
-          const container = document.getElementById('createForm');
-          let html = '<h3 style="margin-top:0">Нове завдання</h3>';
-          
+        const container = document.getElementById('createForm');
+          let html = `
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <h3 style="margin:0">Нове завдання</h3>
+              <button 
+                onclick="refreshFormConfig()" 
+                title="Оновити конфігурацію з таблиці"
+                style="background:#ecf0f1; color:#555; border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:13px; font-weight:normal; min-width:auto; cursor:pointer;">
+                🔄
+              </button>
+            </div>
+          `;
+
           fields.forEach(field => {
             html += `<div class="form-group" style="margin-bottom: 12px;">
               <label style="display:block; font-weight:bold; margin-bottom:5px;">
                 ${field.label} ${field.required ? '<span style="color:red">*</span>' : ''}
               </label>`;
-            
+
             if (field.type === 'select') {
               html += `<input list="list-${field.col}" id="field-${field.col}" class="dynamic-field" 
                         placeholder="Оберіть або введіть..." style="width:100%; padding:8px; box-sizing:border-box;">
@@ -742,7 +768,7 @@ function updateStatus(row, newStatus, overlay, selectEl) {
               html += `<input type="text" id="field-${field.col}" class="dynamic-field" 
                         placeholder="${field.label}" style="width:100%; padding:8px; box-sizing:border-box;">`;
             }
-            
+
             html += `</div>`;
           });
 
@@ -750,10 +776,33 @@ function updateStatus(row, newStatus, overlay, selectEl) {
             <div style="margin-top:20px; display:flex; gap:10px;">
               <button class="btn-cancel" onclick="toggleCreateForm(false)" style="flex:1">Скасувати</button>
               <button class="btn-primary" onclick="submitNewTask()" style="flex:1">Зберегти</button>
-              </div>
+            </div>
           `;
-          
+
           container.innerHTML = html;
+        }
+
+
+        function refreshFormConfig() {
+          const container = document.getElementById('createForm');
+          container.innerHTML = `
+            <h3 style="margin-top:0">Нове завдання</h3>
+            <div style="text-align:center; padding: 20px;">
+              <span style="color: #666;">⏳ Оновлення конфігурації...</span>
+            </div>
+          `;
+          fetch(API_URL)
+            .then(res => res.json())
+            .then(structure => {
+              formConfig = structure;
+              localStorage.setItem(FORM_CONFIG_KEY, JSON.stringify(structure));
+              localStorage.setItem(FORM_CONFIG_TTL_KEY, Date.now().toString());
+              renderDynamicFields(structure);
+            })
+            .catch(err => {
+              container.innerHTML += `<p style="color:red">Помилка оновлення: ${err}</p>
+              <button class="btn-cancel" onclick="toggleCreateForm(false)">Закрити</button>`;
+            });
         }
         
 
