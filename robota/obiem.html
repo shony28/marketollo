@@ -1012,7 +1012,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbx3zMCOwmg4do3fHuWkOAGAH3J2PbCAiRKNgrL__OXMQGlxa-czRr0lBY28bZ2mVem5/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyOioANbi0pYEqgfqXAsc2oDFBk5y_PPtf4wKjRy8quYfVuUMtJG-W-IdygrwHltUvW/exec';
 // ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
@@ -1327,6 +1327,23 @@ function calcVolume(lengthCm, diamCm) {
   return V0 + t * (V1 - V0);
 }
 
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.18);
+    osc.onended = () => ctx.close();
+  } catch(e) {}
+}
+
 function addEntry() {
   const lEl = document.getElementById('field-length');
   const dEl = document.getElementById('field-diameter');
@@ -1356,6 +1373,8 @@ function addEntry() {
   chkSortC.checked = false;  // скидаємо чекбокс
   // Довжина залишається — не очищаємо state.currentLength
   saveState();
+
+  playBeep(); // ← звук підтвердження
 
   setFocus('diameter');
   renderAll();
